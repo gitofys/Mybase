@@ -25,9 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Created by iris.lin on 2019/8/20.
- */
+// 错误状态界面Activity：显示设备错误状态的详细信息
 
 public class ErrorStatusViewActivity extends Activity {
     private ListView listView;
@@ -47,7 +45,7 @@ public class ErrorStatusViewActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_error_status);
         mContext = this;
-        //Set up the action bar title and enable the back arrow
+        // 设置ActionBar标题并启用返回按钮
         ActionBar ab = getActionBar();
         if (ab != null) {
             ab.setDisplayHomeAsUpEnabled(true);
@@ -64,7 +62,7 @@ public class ErrorStatusViewActivity extends Activity {
         int[] images = { R.drawable.leg_gray, R.drawable.leg_gray, R.drawable.leg_gray,
                 R.drawable.leg_gray, R.drawable.leg_gray, R.drawable.leg_gray, R.drawable.leg_gray,R.drawable.leg_gray,R.drawable.leg_gray,R.drawable.leg_gray,R.drawable.leg_gray,R.drawable.leg_gray};
 
-        int data = errbyte[0]&0xFF | (errbyte[1] << 8);//0XFF avoid nagtive number
+        int data = errbyte[0]&0xFF | (errbyte[1] << 8);// 0xFF避免负数
 
         int error_scan = 0x00000001;
         for(int j=0;j<2;j++)

@@ -23,13 +23,9 @@ import static com.ISCSDK.ISCNIRScanSDK.storeBooleanPref;
 import static com.Innospectra.NanoScan.ScanViewActivity.isExtendVer;
 import static com.Innospectra.NanoScan.ScanViewActivity.isExtendVer_PLUS;
 
-/**
- * This activity controls the view for settings once the Nano is connected
- * Four options are presented, each one launching a new activity.
- * Since each option requires the Nano to be connected to perform GATT operations,
- *
- * @author collinmast
- */
+// 配置界面Activity：控制Nano连接后的设置视图
+// 提供四个选项，每个选项都会启动一个新的Activity
+// 由于每个选项都需要Nano连接才能执行GATT操作
 public class ConfigureViewActivity extends Activity {
 
     private static Context mContext;
@@ -50,14 +46,14 @@ public class ConfigureViewActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_configuration);
         mContext = this;
-        //Set the action bar title and enable the back button
+        // 设置ActionBar标题并启用返回按钮
         ActionBar ab = getActionBar();
         if (ab != null) {
             ab.setDisplayHomeAsUpEnabled(true);
             ab.setTitle(getString(R.string.configure));
         }
         InitComponent();
-        //Register the disconnect broadcast receiver
+        // 注册断开连接广播接收器
         LocalBroadcastManager.getInstance(mContext).registerReceiver(DisconnReceiver, disconnFilter);
         LocalBroadcastManager.getInstance(mContext).registerReceiver(BackgroundReciver, new IntentFilter(NOTIFY_BACKGROUND));
     }
@@ -117,20 +113,13 @@ public class ConfigureViewActivity extends Activity {
             SetDeviceButtonStatus(toggle_btn_lock_button.isChecked());
         }
     };
-    /**
-     * On resume, make a call to the super class.
-     * Nothing else is needed here besides calling
-     * the super method.
-     */
+    // Activity恢复时调用父类方法
     @Override
     public void onResume() {
         super.onResume();
         GotoOtherPage = false;
     }
-    /**
-     * When the activity is destroyed, unregister the BroadcastReceiver
-     * handling disconnection events.
-     */
+    // Activity销毁时，注销处理断开连接事件的BroadcastReceiver
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -157,19 +146,12 @@ public class ConfigureViewActivity extends Activity {
             finish();
         }
     }
-    /**
-     * Inflate the options menu
-     * In this case, there is no menu and only an up indicator,
-     * so the function should always return true.
-     */
+    // 创建选项菜单（此Activity没有菜单，只有返回按钮，始终返回true）
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         return true;
     }
-    /**
-     * Handle the selection of a menu item.
-     * In this case, there is only the up indicator. If selected, this activity should finish.
-     */
+    // 处理菜单项选择（此Activity只有返回按钮，选择后应结束Activity）
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
@@ -181,7 +163,7 @@ public class ConfigureViewActivity extends Activity {
     }
     /**
      * Broadcast Receiver handling the disconnect event. If the Nano disconnects,
-     * this activity should finish so that the user is taken back to the {@link HomeViewActivity}
+     * this activity should finish so that the user is taken back to the previous activity
      */
     public class DisconnReceiver extends BroadcastReceiver {
         @Override
@@ -190,9 +172,7 @@ public class ConfigureViewActivity extends Activity {
         }
     }
 
-    /**
-     *  Set device physical button status
-     */
+    // 设置设备物理按钮状态
     private void SetDeviceButtonStatus(Boolean isLockButton)
     {
         //User open lock button on Configure page

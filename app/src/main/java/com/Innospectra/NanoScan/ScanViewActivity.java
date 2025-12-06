@@ -270,7 +270,7 @@ public class ScanViewActivity extends Activity {
     // 是否显示活动配置页面
     public static boolean showActiveconfigpage = false;
 
-    // 从HomeViewActivity->ScanViewActivity触发时检查设备激活状态
+    // 从启动时检查设备激活状态
     private  String mainflag = "";
     // 检查光谱校准系数是否已接收
     Boolean downloadspecFlag = false;
@@ -309,7 +309,7 @@ public class ScanViewActivity extends Activity {
     private static final int REQUEST_WRITE_STORAGE = 112;
     private AlertDialog permissionAlertDialog;
     
-    // 校准存储（从HomeViewActivity迁移）
+    // 校准存储
     public static StoreCalibration storeCalibration = new StoreCalibration();
     public static class StoreCalibration
     {
@@ -1046,7 +1046,7 @@ public class ScanViewActivity extends Activity {
     public class RetrunReadActivateStatusReceiver extends BroadcastReceiver {
 
         public void onReceive(Context context, Intent intent) {
-            if(mainflag!="")// 仅从HomeViewActivity->ScanViewActivity时执行
+            if(mainflag!="")// 仅从启动时执行
             {
                 // 设置活动扫描配置，避免设备使用wpf或winform本地配置
                 ISCNIRScanSDK.SetActiveConfig();

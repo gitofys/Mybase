@@ -36,9 +36,7 @@ import static com.ISCSDK.ISCNIRScanSDK.GetMaxPatternJNI;
 import static com.ISCSDK.ISCNIRScanSDK.WriteScanConfiguration;
 import static com.Innospectra.NanoScan.ScanViewActivity.isExtendVer_PLUS;
 
-/**
- * Created by iris.lin on 2017/12/21.
- */
+// 添加扫描配置界面Activity：用于创建和保存新的扫描配置
 
 
 public class AddScanConfigViewActivity extends Activity {
@@ -182,7 +180,7 @@ public class AddScanConfigViewActivity extends Activity {
             minWavelength = 900;
             maxWavelength = 1700;
         }
-        //Set up the action bar title, and enable the back button
+        // 设置ActionBar标题并启用返回按钮
         ActionBar ab = getActionBar();
         if (ab != null) {
             ab.setDisplayHomeAsUpEnabled(true);

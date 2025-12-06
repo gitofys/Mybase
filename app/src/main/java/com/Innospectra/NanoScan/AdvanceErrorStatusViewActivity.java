@@ -17,9 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Created by iris.lin on 2019/8/28.
- */
+// 高级错误状态界面Activity：显示特定错误类型的详细信息（扫描错误、ADC错误等）
 
 public class AdvanceErrorStatusViewActivity extends Activity {
     private ListView listView;
@@ -32,7 +30,7 @@ public class AdvanceErrorStatusViewActivity extends Activity {
         mContext = this;
         Bundle bundle = getIntent().getExtras();
         int pos =  bundle.getInt("POS");
-        //Set up the action bar title and enable the back arrow
+        // 设置ActionBar标题并启用返回按钮
         ActionBar ab = getActionBar();
         if (ab != null) {
             ab.setDisplayHomeAsUpEnabled(true);
@@ -87,7 +85,7 @@ public class AdvanceErrorStatusViewActivity extends Activity {
         List<Map<String, Object>> list = new ArrayList<Map<String, Object>>();
         switch (pos) {
             case 0://Scan
-                int data0 = errbyte[4]&0xFF;//avoid negative number
+                int data0 = errbyte[4]&0xFF;// 避免负数
                 int error_scan0 = 0x00000001;
                 for (int j = 0; j < 8; j++) {
                     int ret = data0 & error_scan0;

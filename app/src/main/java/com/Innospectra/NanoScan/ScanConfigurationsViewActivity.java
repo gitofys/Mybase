@@ -32,15 +32,9 @@ import static com.Innospectra.NanoScan.ScanViewActivity.isExtendVer;
 import static com.Innospectra.NanoScan.ScanViewActivity.isExtendVer_PLUS;
 
 
-/**
- * This activity controls the view for the Nano stored scan configurations.
- * These configurations have to be individually read from the Nano
- *
- * WARNING: This activity uses JNI function calls. It is important that the name and location of
- *          this activity remain unchanged or the Spectrum C library call will fail
- *
- * @author collinmast
- */
+// 扫描配置界面Activity：控制Nano存储的扫描配置视图
+// 这些配置必须从Nano设备单独读取
+// 警告：此Activity使用JNI函数调用，保持此Activity的名称和位置不变很重要，否则Spectrum C库调用将失败
 public class ScanConfigurationsViewActivity extends Activity {
 
     private static Context mContext;
@@ -82,25 +76,23 @@ public class ScanConfigurationsViewActivity extends Activity {
         ScanConfigName.clear();
         lv_configs = (ListView) findViewById(R.id.lv_configs);
         lv_configs.setOnItemClickListener(Select_Config_ItemClick);
-        //Set up the action bar title, and enable the back button
+        // 设置ActionBar标题并启用返回按钮
         ActionBar ab = getActionBar();
         if (ab != null) {
             ab.setDisplayHomeAsUpEnabled(true);
             ab.setTitle(getString(R.string.scan_configurations));
         }
 
-        //Get the number of scan config and scan config data
+        // 获取扫描配置数量和扫描配置数据
         ISCNIRScanSDK.GetScanConfig();
-        //register the necessary broadcast receivers
+        // 注册必要的广播接收器
         LocalBroadcastManager.getInstance(mContext).registerReceiver(ScanConfSizeReceiver, scanConfSizeFilter);
         LocalBroadcastManager.getInstance(mContext).registerReceiver(ScanConfReceiver, scanConfFilter);
         LocalBroadcastManager.getInstance(mContext).registerReceiver(GetActiveScanConfReceiver, getActiveScanConfFilter);
         LocalBroadcastManager.getInstance(mContext).registerReceiver(DisconnReceiver, disconnFilter);
         LocalBroadcastManager.getInstance(mContext).registerReceiver(BackgroundReciver, new IntentFilter(NOTIFY_BACKGROUND));
     }
-    /**
-     * Send broadcast  GET_SCAN_CONF will  through ScanConfSizeReceiver to get the number of scan config(ISCNIRScanSDK.GetScanConfig() should be claaed)
-     */
+    // 发送GET_SCAN_CONF广播，通过ScanConfSizeReceiver获取扫描配置数量（需要调用ISCNIRScanSDK.GetScanConfig()）
     private class ScanConfSizeReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -117,9 +109,7 @@ public class ScanConfigurationsViewActivity extends Activity {
             }
         }
     }
-    /**
-     * Send broadcast  GET_SCAN_CONF will  through ScanConfSizeReceiver to get the scan config data(ISCNIRScanSDK.GetScanConfig() should be called)
-     */
+    // 发送GET_SCAN_CONF广播，通过ScanConfReceiver获取扫描配置数据（需要调用ISCNIRScanSDK.GetScanConfig()）
     private class ScanConfReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -136,9 +126,7 @@ public class ScanConfigurationsViewActivity extends Activity {
             ScanConfigName.add(scanConf.getConfigName());
         }
     }
-    /**
-     * Send broadcast  GET_ACTIVE_CONF will  through GetActiveScanConfReceiver to get active config(ISCNIRScanSDK.GetActiveConfig() should be called)
-     */
+    // 发送GET_ACTIVE_CONF广播，通过GetActiveScanConfReceiver获取活动配置（需要调用ISCNIRScanSDK.GetActiveConfig()）
     private class GetActiveScanConfReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -165,7 +153,7 @@ public class ScanConfigurationsViewActivity extends Activity {
         public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
             byte[] index = {0, 0};
             index[0] = (byte) scanConfAdapter.configs.get(i).getScanConfigIndex();
-            //the index over 256 should calculate index[1]
+            // 索引超过256时应计算index[1]
             index[1] = (byte) (scanConfAdapter.configs.get(i).getScanConfigIndex()/256);
             ISCNIRScanSDK.SetActiveConfig(index);
             for(int j=0;j<scanConfAdapter.configs.size();j++)
@@ -180,11 +168,7 @@ public class ScanConfigurationsViewActivity extends Activity {
             scanConfAdapter.notifyDataSetChanged();
         }
     };
-    /**
-     * On resume, make a call to the super class.
-     * Nothing else is needed here besides calling
-     * the super method.
-     */
+    // Activity恢复时调用父类方法
     @Override
     public void onResume() {
         super.onResume();
@@ -198,11 +182,7 @@ public class ScanConfigurationsViewActivity extends Activity {
         }
     }
 
-    /**
-     * When the activity is destroyed, unregister the BroadcastReceivers
-     * handling receiving scan configurations, disconnect events, the # of configurations,
-     * and the active configuration
-     */
+    // Activity销毁时，注销处理接收扫描配置、断开连接事件、配置数量和活动配置的BroadcastReceiver
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -235,28 +215,21 @@ public class ScanConfigurationsViewActivity extends Activity {
             finish();
         }
     }
-    /**
-     * Inflate the options menu
-     * In this case, there is no menu and only an up indicator,
-     * so the function should always return true.
-     */
+    // 创建选项菜单（此Activity没有菜单，只有返回按钮，始终返回true）
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_stored_configurations, menu);
         mMenu = menu;
         mMenu.findItem(R.id.action_add).setEnabled(false);
-        //Tiva version <2.1.0.67
+        // Tiva版本 <2.1.0.67
         if((!isExtendVer_PLUS && !isExtendVer && ScanViewActivity.fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_0)==0)
                 || ISCNIRScanSDK.getStringPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.Activacatestatus, "").contains("Activated") ==false || ScanViewActivity.isOldTiva)
             mMenu.findItem(R.id.action_add).setVisible(false);
         return true;
     }
 
-    /**
-     * Handle the selection of a menu item.
-     * In this case, there is only the up indicator. If selected, this activity should finish.
-     */
+    // 处理菜单项选择（此Activity只有返回按钮，选择后应结束Activity）
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
@@ -281,9 +254,7 @@ public class ScanConfigurationsViewActivity extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
-    /**
-     * Custom adapter that holds {@link ISCNIRScanSDK.ScanConfiguration} objects for the listview
-     */
+    // 自定义适配器，用于在ListView中保存ISCNIRScanSDK.ScanConfiguration对象
     public class ScanConfAdapter extends ArrayAdapter<ISCNIRScanSDK.ScanConfiguration> {
         private final ArrayList<ISCNIRScanSDK.ScanConfiguration> configs;
         public ScanConfAdapter(Context context, ArrayList<ISCNIRScanSDK.ScanConfiguration> values) {
@@ -315,15 +286,13 @@ public class ScanConfigurationsViewActivity extends Activity {
             return convertView;
         }
     }
-    /**
-     * View holder for the {@link ISCNIRScanSDK.ScanConfiguration} class
-     */
+    // ISCNIRScanSDK.ScanConfiguration类的视图持有者
     private class ViewHolder {
         private TextView ConfigName;
     }
     /**
      * Broadcast Receiver handling the disconnect event. If the Nano disconnects,
-     * this activity should finish so that the user is taken back to the {@link HomeViewActivity}
+     * this activity should finish so that the user is taken back to the previous activity
      */
     public class DisconnReceiver extends BroadcastReceiver {
 

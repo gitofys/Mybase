@@ -17,9 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Created by iris.lin on 2019/8/19.
- */
+// 高级设备状态界面Activity：显示设备状态的详细信息（Tiva、扫描、BLE等状态）
 
 public class AdvanceDeviceStatusViewActivity extends Activity {
     private ListView listView;
@@ -56,11 +54,11 @@ public class AdvanceDeviceStatusViewActivity extends Activity {
             }
             tiva = tiva<<1;
         }
-        //Battery in charge 在下一個byte
+        // 电池充电状态在下一个字节
         data = devbyte[1];
         if(data!=0)
             images[6] = R.drawable.led_g;
-        //Set up the action bar title and enable the back arrow
+        // 设置ActionBar标题并启用返回按钮
         ActionBar ab = getActionBar();
         if(ab != null) {
             ab.setDisplayHomeAsUpEnabled(true);
@@ -71,7 +69,7 @@ public class AdvanceDeviceStatusViewActivity extends Activity {
         String[] title = { "Tiva", "Scanning", "BLE stack", "BLE connection", "Scan Data Interpreting", "Scan Button Pressed", "Battery in charge"};
         images[0] = R.drawable.led_g;
         List<Map<String, Object>> list = new ArrayList<Map<String, Object>>();
-        //Put pictures and text into a collection
+        // 将图片和文本放入集合
         for (int i = 0; i < images.length; i++) {
             Map<String, Object> map = new HashMap<String, Object>();
             map.put("images", images[i]);
@@ -88,10 +86,7 @@ public class AdvanceDeviceStatusViewActivity extends Activity {
         super.onResume();
         GotoOtherPage = false;
     }
-    /*
-   * Handle the selection of a menu item.
-   * In this case, there is only the up indicator. If selected, this activity should finish.
-   */
+    // 处理菜单项选择（此Activity只有返回按钮，选择后应结束Activity）
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 

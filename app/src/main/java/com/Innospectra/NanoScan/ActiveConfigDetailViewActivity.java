@@ -55,7 +55,7 @@ public class ActiveConfigDetailViewActivity extends Activity {
         if(getIntent().getSerializableExtra("conf") != null){
             activeConf = (ISCNIRScanSDK.ScanConfiguration) getIntent().getSerializableExtra("conf");
         }
-        //Set up the action bar title, and enable the back button
+        // 设置ActionBar标题并启用返回按钮
         ActionBar ab = getActionBar();
         if (ab != null) {
             ab.setDisplayHomeAsUpEnabled(true);
@@ -84,7 +84,7 @@ public class ActiveConfigDetailViewActivity extends Activity {
             scanConfAdapter = new ScanConfAdapter(mContext, configs);
             lv_configs.setAdapter(scanConfAdapter);
         }
-        //register the necessary broadcast receivers
+        // 注册必要的广播接收器
         LocalBroadcastManager.getInstance(mContext).registerReceiver(DisconnReceiver, disconnFilter);
     }
     private void init_exposure_time_value()
@@ -97,22 +97,14 @@ public class ActiveConfigDetailViewActivity extends Activity {
         exposure_time_vlaue.add("30.48");
         exposure_time_vlaue.add("60.96");
     }
-    /*
-     * On resume, make a call to the super class.
-     * Nothing else is needed here besides calling
-     * the super method.
-     */
+    // Activity恢复时调用父类方法
     @Override
     public void onResume() {
         super.onResume();
         GotoOtherPage = false;
     }
 
-    /*
-     * When the activity is destroyed, unregister the BroadcastReceivers
-     * handling receiving scan configurations, disconnect events, the # of configurations,
-     * and the active configuration
-     */
+    // Activity销毁时，注销处理接收扫描配置、断开连接事件、配置数量和活动配置的BroadcastReceiver
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -134,20 +126,13 @@ public class ActiveConfigDetailViewActivity extends Activity {
         super.onBackPressed();
     }
 
-    /*
-     * Inflate the options menu
-     * In this case, there is no menu and only an up indicator,
-     * so the function should always return true.
-     */
+    // 创建选项菜单（此Activity没有菜单，只有返回按钮，始终返回true）
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         return true;
     }
 
-    /*
-     * Handle the selection of a menu item.
-     * In this case, there is only the up indicator. If selected, this activity should finish.
-     */
+    // 处理菜单项选择（此Activity只有返回按钮，选择后应结束Activity）
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
@@ -223,9 +208,7 @@ public class ActiveConfigDetailViewActivity extends Activity {
         }
     }
 
-    /**
-     * Custom adapter that holds {@link ISCNIRScanSDK.ScanConfiguration} objects for the listview
-     */
+    // 自定义适配器，用于在ListView中保存ISCNIRScanSDK.SlewScanSection对象（Slew扫描配置）
     public class SlewScanConfAdapter extends ArrayAdapter<ISCNIRScanSDK.SlewScanSection> {
         private final ArrayList<ISCNIRScanSDK.SlewScanSection> sections;
         public SlewScanConfAdapter(Context context, ArrayList<ISCNIRScanSDK.SlewScanSection> values) {
@@ -274,9 +257,7 @@ public class ActiveConfigDetailViewActivity extends Activity {
         }
     }
 
-    /**
-     * View holder for the {@link ISCNIRScanSDK.ScanConfiguration} class
-     */
+    // ISCNIRScanSDK.ScanConfiguration类的视图持有者
     private class ViewHolder {
         private TextView scanType;
         private TextView rangeStart;
@@ -288,10 +269,7 @@ public class ActiveConfigDetailViewActivity extends Activity {
         private TextView exposure;
     }
 
-    /**
-     * Broadcast Receiver handling the disconnect event. If the Nano disconnects,
-     * this activity should finish so that the user is taken back to the {@link HomeViewActivity}
-     */
+    // 处理断开连接事件的广播接收器，如果Nano断开连接，此Activity应结束，以便用户返回到上一个Activity
     public class DisconnReceiver extends BroadcastReceiver {
 
         @Override

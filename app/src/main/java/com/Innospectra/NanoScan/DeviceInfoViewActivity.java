@@ -21,13 +21,8 @@ import com.Innospectra.ISCScanNano.R;
 import static com.Innospectra.NanoScan.ScanViewActivity.isExtendVer;
 import static com.Innospectra.NanoScan.ScanViewActivity.isExtendVer_PLUS;
 
-/**
- * This activity controls the view for the device information after the Nano is connected
- * When the activity is created, it will send a broadcast to the {@link ISCNIRScanSDK} to start
- * retrieving device information
- *
- * @author collinmast
- */
+// 设备信息界面Activity：控制Nano连接后的设备信息视图
+// 当Activity创建时，会向ISCNIRScanSDK发送广播以开始获取设备信息
 
 public class DeviceInfoViewActivity extends Activity {
 
@@ -47,7 +42,7 @@ public class DeviceInfoViewActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_device_info);
         mContext = this;
-        //Set up the action bar title and enable the back indicator
+        // 设置ActionBar标题并启用返回按钮
         ActionBar ab = getActionBar();
         if (ab != null) {
             ab.setDisplayHomeAsUpEnabled(true);
@@ -60,14 +55,11 @@ public class DeviceInfoViewActivity extends Activity {
         tv_hw = (TextView) findViewById(R.id.tv_hw);
         tv_tiva = (TextView) findViewById(R.id.tv_tiva);
 
-        //Get device information
+        // 获取设备信息
         ISCNIRScanSDK.GetDeviceInfo();
-        /**
-                 * Initialize device information broadcast receiver.
-                 * All device information is sent in one broadcast.
-                 * Once the information is received, make the progress bar invisible
-                 *(ISCNIRScanSDK.GetDeviceInfo() should be called)
-                 */
+        // 初始化设备信息广播接收器
+        // 所有设备信息在一个广播中发送
+        // 一旦接收到信息，使进度条不可见（需要调用ISCNIRScanSDK.GetDeviceInfo()）
         DeviceInfoReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -86,26 +78,19 @@ public class DeviceInfoViewActivity extends Activity {
                 pb.setVisibility(View.INVISIBLE);
             }
         };
-        //register the broadcast receivers
+        // 注册广播接收器
         LocalBroadcastManager.getInstance(mContext).registerReceiver(DeviceInfoReceiver, new IntentFilter(ISCNIRScanSDK.ACTION_INFO));
         LocalBroadcastManager.getInstance(mContext).registerReceiver(DisconnReceiver, disconnFilter);
     }
 
-    /**
-     * On resume, make a call to the superclass.
-     * Nothing else is needed here besides calling
-     * the super method.
-     */
+    // Activity恢复时调用父类方法
     @Override
     public void onResume() {
         super.onResume();
         GotoOtherPage = false;
     }
 
-    /**
-     * When the activity is destroyed, unregister the BroadcastReceiver
-     * handling disconnection events, and the receiver handling the device information
-     */
+    // Activity销毁时，注销处理断开连接事件和设备信息的BroadcastReceiver
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -129,20 +114,13 @@ public class DeviceInfoViewActivity extends Activity {
         GotoOtherPage = true;
         super.onBackPressed();
     }
-    /**
-     * Inflate the options menu
-     * In this case, there is no menu and only an up indicator,
-     * so the function should always return true.
-     */
+    // 创建选项菜单（此Activity没有菜单，只有返回按钮，始终返回true）
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         return true;
     }
 
-    /**
-     * Handle the selection of a menu item.
-     * In this case, there is only the up indicator. If selected, this activity should finish.
-     */
+    // 处理菜单项选择（此Activity只有返回按钮，选择后应结束Activity）
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
@@ -155,7 +133,7 @@ public class DeviceInfoViewActivity extends Activity {
 
     /**
      * Broadcast Receiver handling the disconnect event. If the Nano disconnects,
-     * this activity should finish so that the user is taken back to the {@link HomeViewActivity}.
+     * this activity should finish so that the user is taken back to the previous activity.
      * A toast message should appear so that the user knows why the activity is finishing.
      */
     public class DisconnReceiver extends BroadcastReceiver {

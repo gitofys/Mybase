@@ -20,12 +20,8 @@ import android.widget.Toast;
 import com.ISCSDK.ISCNIRScanSDK;
 import com.Innospectra.ISCScanNano.R;
 
-/**
- * This activity controls the view for the Nano device status
- * This includes information such as Nano temp/humidity, and battery percentage
- *
- * @author collinmast
- */
+// 设备状态界面Activity：控制Nano设备状态视图
+// 包括温度/湿度、电池百分比等信息
 public class DeviceStatusViewActivity extends Activity {
     private static Context mContext;
     private TextView tv_batt;
@@ -51,7 +47,7 @@ public class DeviceStatusViewActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_device_status);
         mContext = this;
-        //Set up the action bar title and enable the back arrow
+        // 设置ActionBar标题并启用返回按钮
         ActionBar ab = getActionBar();
         if(ab != null) {
             ab.setDisplayHomeAsUpEnabled(true);
@@ -69,12 +65,10 @@ public class DeviceStatusViewActivity extends Activity {
         btn_device_status.setOnClickListener(Device_Status_Click);
         btn_error_status.setOnClickListener(Error_Status_Click);
 
-        //Get device status information from the device
+        // 从设备获取设备状态信息
         ISCNIRScanSDK.GetDeviceStatus();
         setActivityTouchDisable(true);
-        /**
-         * Set up receiver for device status information(ISCNIRScanSDK.GetDeviceStatus() should be called)
-         */
+        // 设置设备状态信息接收器（需要调用ISCNIRScanSDK.GetDeviceStatus()）
         mStatusReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -95,7 +89,7 @@ public class DeviceStatusViewActivity extends Activity {
                 setActivityTouchDisable(false);
             }
         };
-        //Register receivers for disconnection events and device status information
+        // 注册断开连接事件和设备状态信息的接收器
         LocalBroadcastManager.getInstance(mContext).registerReceiver(mStatusReceiver, new IntentFilter(ISCNIRScanSDK.ACTION_STATUS));
         LocalBroadcastManager.getInstance(mContext).registerReceiver(DisconnReceiver, disconnFilter);
         LocalBroadcastManager.getInstance(mContext).registerReceiver(BackgroundReciver, new IntentFilter(NOTIFY_BACKGROUND));
@@ -121,7 +115,7 @@ public class DeviceStatusViewActivity extends Activity {
         lampusage += lamptime + "sec ";
         return lampusage;
     }
-    //region Button vent
+    // 按钮事件处理
     private Button.OnClickListener Update_Threshold_Click = new Button.OnClickListener()
     {
         @Override
@@ -155,22 +149,15 @@ public class DeviceStatusViewActivity extends Activity {
             startActivity(graphIntent);
         }
     };
-    //endregion
-    /**
-         * On resume, make a call to the super class.
-         * Nothing else is needed here besides calling
-         * the super method.
-         */
+    // 按钮事件处理结束
+    // Activity恢复时调用父类方法
     @Override
     public void onResume(){
         super.onResume();
         GotoOtherPage = false;
     }
 
-    /**
-         * When the activity is destroyed, unregister the BroadcastReceivers
-         * handling disconnection and status events
-         */
+    // Activity销毁时，注销处理断开连接和状态事件的BroadcastReceiver
     @Override
     public void onDestroy(){
         super.onDestroy();
@@ -201,20 +188,13 @@ public class DeviceStatusViewActivity extends Activity {
             finish();
         }
     }
-    /**
-         * Inflate the options menu
-         * In this case, there is no menu and only an up indicator,
-         * so the function should always return true.
-         */
+    // 创建选项菜单（此Activity没有菜单，只有返回按钮，始终返回true）
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         return true;
     }
 
-    /**
-         * Handle the selection of a menu item.
-         * In this case, there is only the up indicator. If selected, this activity should finish.
-         */
+    // 处理菜单项选择（此Activity只有返回按钮，选择后应结束Activity）
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 
@@ -228,7 +208,7 @@ public class DeviceStatusViewActivity extends Activity {
 
     /**
      * Broadcast Receiver handling the disconnect event. If the Nano disconnects,
-     * this activity should finish so that the user is taken back to the {@link HomeViewActivity}
+     * this activity should finish so that the user is taken back to the previous activity
      */
     public class DisconnReceiver extends BroadcastReceiver {
 

@@ -25,9 +25,7 @@ import java.util.regex.Pattern;
 import static com.ISCSDK.ISCNIRScanSDK.getStringPref;
 import static com.ISCSDK.ISCNIRScanSDK.storeStringPref;
 
-/**
- * Created by iris.lin on 2018/3/19.
- */
+// 激活界面Activity：用于输入许可证密钥以激活设备的高级功能
 
 public class  ActivationViewActivity extends Activity {
     private static Context mContext;
@@ -46,7 +44,7 @@ public class  ActivationViewActivity extends Activity {
         setContentView(R.layout.license_key);
         mContext = this;
 
-        //Set up the action bar title, and enable the back button
+        // 设置ActionBar标题并启用返回按钮
         ActionBar ab = getActionBar();
         if (ab != null) {
             ab.setDisplayHomeAsUpEnabled(true);
@@ -106,9 +104,7 @@ public class  ActivationViewActivity extends Activity {
         return true;
     }
 
-    /**
-     *  Send broadcast  ACTION_ACTIVATE_STATE  will  through RetrunActivateStatusReceiver  to get the activate state of the device(ISCNIRScanSDK.SetLicenseKey(data) should be called))
-     */
+    // 发送ACTION_ACTIVATE_STATE广播，通过RetrunActivateStatusReceiver获取设备的激活状态（需要调用ISCNIRScanSDK.SetLicenseKey(data)）
     public class RetrunActivateStatusReceiver extends BroadcastReceiver {
 
         public void onReceive(Context context, Intent intent) {
@@ -128,22 +124,14 @@ public class  ActivationViewActivity extends Activity {
             }
         }
     }
-    /**
-       * On resume, make a call to the super class.
-       * Nothing else is needed here besides calling
-       * the super method.
-       */
+    // Activity恢复时调用父类方法
     @Override
     public void onResume() {
         super.onResume();
         GotoOtherPage = false;
     }
 
-    /**
-     * When the activity is destroyed, unregister the BroadcastReceivers
-     * handling receiving scan configurations, disconnect events, the # of configurations,
-     * and the active configuration
-     */
+    // Activity销毁时，注销处理激活状态的BroadcastReceiver
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -164,20 +152,13 @@ public class  ActivationViewActivity extends Activity {
         GotoOtherPage = true;
         super.onBackPressed();
     }
-    /**
-     * Inflate the options menu
-     * In this case, there is no menu and only an up indicator,
-     * so the function should always return true.
-     */
+    // 创建选项菜单（此Activity没有菜单，只有返回按钮，始终返回true）
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         return true;
     }
 
-    /**
-     * Handle the selection of a menu item.
-     * In this case, there is only the up indicator. If selected, this activity should finish.
-     */
+    // 处理菜单项选择（此Activity只有返回按钮，选择后应结束Activity）
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
@@ -189,7 +170,7 @@ public class  ActivationViewActivity extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
-    /*** Filter out all non-numeric, / and-characters ***/
+    // 过滤掉所有非数字、/和-字符
     public static String filterDate(String Str) {
         String filter = "[^0-9^A-Z^a-z]"; // Specify the characters to be filtered
         Pattern p = Pattern.compile(filter);
@@ -209,7 +190,7 @@ public class  ActivationViewActivity extends Activity {
             //Shift the binary value of the first value by 4 bits to the left,ex: 00001000 => 10000000 (8=>128)
             //Then concatenate with the binary value of the second value ex: 10000000 | 00001100 => 10001100 (137)
             int value = (high << 4) | low;
-            //Complementary with FFFFFFFF
+            // 与FFFFFFFF进行补码运算
             if (value > 127)
                 value -= 256;
             //Finally change to byte

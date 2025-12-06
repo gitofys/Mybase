@@ -33,12 +33,10 @@ import java.util.ArrayList;
 
 import static com.ISCSDK.ISCNIRScanSDK.storeStringPref;
 
-/**
- * Activity for scanning for advertising Nano devices over BLE
- * This allows the user to specify a preferred Nano to use in the future.
- * The preferred Nano will be connected to first in environments with more than one Nano
- * 选择设备ID的列表，后期考虑自动识别。
- */
+// 设备选择界面Activity：通过BLE扫描广播的Nano设备
+// 允许用户指定一个首选Nano设备供将来使用
+// 在有多个Nano设备的环境中，将首先连接首选Nano设备
+// 选择设备ID的列表，后期考虑自动识别
 public class SelectDeviceViewActivity extends Activity {
 
     private Handler mHandler;
@@ -57,7 +55,7 @@ public class SelectDeviceViewActivity extends Activity {
         mContext = this;
         DEVICE_NAME = ISCNIRScanSDK.getStringPref(mContext,ISCNIRScanSDK.SharedPreferencesKeys.DeviceFilter,"NIR");
 
-        //Set up action bar title and enable back button
+        // 设置ActionBar标题并启用返回按钮
         ActionBar ab = getActionBar();
         if (ab != null) {
             ab.setTitle(getString(R.string.select_nano));
@@ -69,7 +67,7 @@ public class SelectDeviceViewActivity extends Activity {
         mBluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
 
         ListView lv_nanoDevices = (ListView) findViewById(R.id.lv_nanoDevices);
-        //Create adapter for the NanoDevice objects returned from a BLE scan
+        // 为BLE扫描返回的NanoDevice对象创建适配器
         nanoScanAdapter = new NanoScanAdapter(this, nanoDeviceList);
         lv_nanoDevices.setAdapter(nanoScanAdapter);
         lv_nanoDevices.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -83,12 +81,8 @@ public class SelectDeviceViewActivity extends Activity {
         scanLeDevice(true);
     }
 
-    /**
-     * Provide user with a dialog that asks if they are sure they want to use the Nano with the
-     * specified mac as their preferred device
-     *
-     * @param mac MAC address of Nano
-     */
+    // 向用户显示对话框，询问是否确定要将指定MAC地址的Nano设为首选设备
+    // mac: Nano设备的MAC地址
     public void confirmationDialog(String mac, final String name) {
 
         final AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(mContext);
@@ -117,16 +111,9 @@ public class SelectDeviceViewActivity extends Activity {
         alertDialog.show();
     }
 
-    /**
-     * Callback function for Bluetooth scanning. This function provides the instance of the
-     * Bluetooth device {@link BluetoothDevice} that was found, it's rssi, and advertisement
-     * data (scanRecord).
-     * <p>
-     * When a Bluetooth device with the advertised name matching the
-     * string DEVICE_NAME {@link SelectDeviceViewActivity#DEVICE_NAME} is found, a call is made to connect
-     * to the device. Also, the Bluetooth should stop scanning, even if
-     * the {@link ISCNIRScanSDK#SCAN_PERIOD} has not expired
-     */
+    // 蓝牙扫描回调函数：提供找到的BluetoothDevice实例、RSSI和广播数据（scanRecord）
+    // 当找到广告名称匹配DEVICE_NAME的蓝牙设备时，会调用连接设备
+    // 即使ISCNIRScanSDK.SCAN_PERIOD尚未到期，蓝牙也应停止扫描
     private ScanCallback mLeScanCallback = new ScanCallback() {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
@@ -158,10 +145,7 @@ public class SelectDeviceViewActivity extends Activity {
         }
 
     };
-    /**
-     * Handle the selection of a menu item.
-     * In this case, there is only the up indicator. If selected, this activity should finish.
-     */
+    // 处理菜单项选择（此Activity只有返回按钮，选择后应结束Activity）
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
@@ -173,21 +157,16 @@ public class SelectDeviceViewActivity extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
-    /**
-     * Scans for Bluetooth devices on the specified interval {@link ISCNIRScanSDK#SCAN_PERIOD}.
-     * This function uses the handler {@link SelectDeviceViewActivity#mHandler} to delay call to stop
-     * scanning until after the interval has expired. The start and stop functions take an
-     * LeScanCallback parameter that specifies the callback function when a Bluetooth device
-     * @param enable Tells the Bluetooth adapter {@link SelectDeviceViewActivity#mBluetoothAdapter} if
-     *               it should start or stop scanning
-     */
+    // 在指定间隔ISCNIRScanSDK.SCAN_PERIOD扫描蓝牙设备
+    // 此函数使用Handler延迟调用停止扫描，直到间隔到期
+    // enable: 告诉BluetoothAdapter是否应该开始或停止扫描
     @SuppressLint("MissingPermission")
     private void scanLeDevice(final boolean enable) {
         if(mBluetoothLeScanner == null){
             Toast.makeText(SelectDeviceViewActivity.this, "Could not open LE scanner", Toast.LENGTH_SHORT).show();
         }else {
             if (enable) {
-                // Stops scanning after a pre-defined scan period.在预定的扫描周期后停止扫描。
+                // 在预定的扫描周期后停止扫描
                 mHandler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
@@ -201,10 +180,8 @@ public class SelectDeviceViewActivity extends Activity {
         }
     }
 
-    /**
-     * Custom adapter that holds {@link ISCNIRScanSDK.NanoDevice} objects to be used in a listview.
-     * This adapter contains device name, MAC, and RSSI
-     */
+    // 自定义适配器，用于在ListView中保存ISCNIRScanSDK.NanoDevice对象
+    // 此适配器包含设备名称、MAC地址和RSSI
     private class NanoScanAdapter extends ArrayAdapter<ISCNIRScanSDK.NanoDevice> {
         private final ArrayList<ISCNIRScanSDK.NanoDevice> nanoDevices;
         public NanoScanAdapter(Context context, ArrayList<ISCNIRScanSDK.NanoDevice> values) {
@@ -236,9 +213,7 @@ public class SelectDeviceViewActivity extends Activity {
         }
     }
 
-    /**
-     * View holder for {@link ISCNIRScanSDK.NanoDevice} objects
-     */
+    // ISCNIRScanSDK.NanoDevice对象的视图持有者
     private class ViewHolder {
         private TextView nanoName;
         private TextView nanoMac;

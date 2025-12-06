@@ -30,18 +30,11 @@ import com.Innospectra.ISCScanNano.R;
 import static com.ISCSDK.ISCNIRScanSDK.getStringPref;
 import static com.ISCSDK.ISCNIRScanSDK.storeStringPref;
 
-/**
- * This activity controls the view for global settings. These settings do not require a Nano
- * to be connected.
- *
- * The user can change temperature and spatial frequency units, as well as set and clear a
- * preferred Nano device
- *
- * @author collinmast
- */
+// 设置界面Activity：控制全局设置视图，这些设置不需要Nano设备连接
+// 用户可以更改温度和空间频率单位，以及设置和清除首选Nano设备
 public class SettingsViewActivity extends Activity {
 
-    // private TextView tv_version;
+    // 版本号显示（已移除）
     private Button btn_set;
     private Button btn_forget;
     private AlertDialog alertDialog;
@@ -57,7 +50,7 @@ public class SettingsViewActivity extends Activity {
         mContext = this;
         InitComponent();
 
-        //Set up action bar up indicator
+        // 设置ActionBar返回按钮
         ActionBar ab = getActionBar();
         if (ab != null) {
             ab.setDisplayHomeAsUpEnabled(true);
@@ -91,9 +84,9 @@ public class SettingsViewActivity extends Activity {
     @Override
     public void onResume() {
         super.onResume();
-        //Initialize preferred device
+        // 初始化首选设备
         preferredNano = getStringPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.preferredDevice, null);
-        //Retrieve package information for displaying version info 开发包软件的版本信息，无用，取消。
+        // 获取包信息以显示版本信息（已移除，不再使用）
 //        try {
 //            PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
 //            String version = pInfo.versionName;
@@ -131,7 +124,7 @@ public class SettingsViewActivity extends Activity {
                 }
             }
         });
-        //Update set button and field based on whether a preferred nano has been set or not
+        // 根据是否已设置首选设备来更新设置按钮和字段
         if (preferredNano != null) {
             btn_set.setVisibility(View.INVISIBLE);
             tv_pref_nano.setText(getStringPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.preferredDeviceModel, null));
@@ -142,28 +135,19 @@ public class SettingsViewActivity extends Activity {
         }
     }
 
-    /**
-     * When the activity is destroyed, make a call to super class
-     */
+    // Activity销毁时调用父类方法
     @Override
     public void onDestroy() {
         super.onDestroy();
     }
 
-    /**
-     * Inflate the options menu
-     * In this case, there is no menu and only an up indicator,
-     * so the function should always return true.
-     */
+    // 创建选项菜单（此Activity没有菜单，只有返回按钮，始终返回true）
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         return true;
     }
 
-    /**
-     * Handle the selection of a menu item.
-     * In this case, there is are two items, the up indicator, and the settings button
-     */
+    // 处理菜单项选择（此Activity只有返回按钮和设置按钮）
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 
@@ -180,10 +164,8 @@ public class SettingsViewActivity extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
-    /**
-     * Function for displaying the dialog to confirm clearing the stored Nano
-     * @param mac the mac address of the stored Nano
-     */
+    // 显示确认清除已存储Nano设备的对话框
+    // mac: 已存储Nano设备的MAC地址
     public void confirmationDialog(String mac) {
 
         final AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(mContext);
