@@ -1,0 +1,390 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:id="@+id/layout_main"
+    tools:context="com.Innospectra.NanoScan.ScanViewActivity">
+
+    <!-- Connection status and lamp control bar -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="8dp"
+        android:background="#F5F5F5">
+
+        <TextView
+            android:id="@+id/tv_connection_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:text="未连接"
+            android:textColor="@color/red"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_warmup_countdown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toEndOf="@+id/tv_connection_status"
+            android:layout_centerVertical="true"
+            android:layout_marginStart="16dp"
+            android:text="预热中: 0s"
+            android:textColor="@color/blue"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+        
+        <Button
+            android:id="@+id/btn_lamp_settings"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toStartOf="@+id/btn_connect_device"
+            android:layout_centerVertical="true"
+            android:layout_marginEnd="8dp"
+            android:text="灯控制"
+            android:textSize="12sp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp" />
+        
+        <Button
+            android:id="@+id/btn_connect_device"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:text="连接设备"
+            android:textSize="12sp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp" />
+    </RelativeLayout>
+
+    <!-- Chart display area - larger and square -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1.2"
+        android:layout_marginStart="@dimen/dip8"
+        android:layout_marginEnd="@dimen/dip8"
+        android:layout_marginTop="@dimen/dip8"
+        android:layout_marginBottom="@dimen/dip8">
+
+        <!-- Display mode selector -->
+        <LinearLayout
+            android:id="@+id/display_mode_selector"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="4dp"
+            android:background="#F0F0F0">
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="显示模式:"
+                android:textSize="12sp"
+                android:layout_marginEnd="8dp" />
+            
+            <Spinner
+                android:id="@+id/spinner_display_mode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="120dp" />
+        </LinearLayout>
+
+        <!-- Single chart view (replaces ViewPager) -->
+        <FrameLayout
+            android:id="@+id/chart_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_below="@id/display_mode_selector"
+            android:layout_marginTop="4dp">
+            
+            <!-- Main chart (switches between intensity/absorbance/reflectance) -->
+            <com.github.mikephil.charting.charts.LineChart
+                android:id="@+id/lineChartMain"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="visible" />
+        </FrameLayout>
+
+        <ProgressBar
+            android:id="@+id/calProgress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:indeterminate="true"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/progressBarinsideText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/calProgress"
+            android:layout_centerHorizontal="true"
+            android:textColor="@color/black"
+            android:visibility="gone" />
+
+    </RelativeLayout>
+
+    <!-- File prefix and scan button area -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="@dimen/dip8"
+        android:background="#F5F5F5">
+        
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="文件名前缀:"
+            android:textSize="14sp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginEnd="8dp" />
+        
+        <EditText
+            android:id="@+id/et_prefix"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="输入文件名前缀"
+            android:singleLine="true"
+            android:padding="8dp" />
+        
+        <Button
+            android:id="@+id/btn_toggle_config"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="显示配置"
+            android:textSize="12sp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:layout_marginStart="8dp" />
+    </LinearLayout>
+
+    <!-- Collapsible configuration area (manual mode only) -->
+    <LinearLayout
+        android:id="@+id/layout_config_collapsible"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:padding="@dimen/dip8"
+        android:background="#FAFAFA">
+        
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxHeight="300dp">
+            
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <!-- Lamp time -->
+                <LinearLayout
+                    android:id="@+id/ll_prefix_manual"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusableInTouchMode="true">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="灯时间(ms):"
+                        android:textAppearance="?android:textAppearanceMedium" />
+
+                    <EditText
+                        android:id="@+id/et_manual_lamptime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:ems="4"
+                        android:imeOptions="actionDone"
+                        android:inputType="number"
+                        android:singleLine="true"
+                        android:text="625" />
+
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/px1"
+                    android:layout_below="@id/ll_prefix_manual"
+                    android:background="@color/gray" />
+
+                <!-- Scan mode -->
+                <LinearLayout
+                    android:id="@+id/ly_scan_mode"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/ll_prefix_manual">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="扫描模式:"
+                        android:textAppearance="?android:textAppearanceMedium" />
+
+                    <ToggleButton
+                        android:id="@+id/toggle_button_manual_scan_mode"
+                        android:layout_width="wrap_content"
+                        android:layout_height="@dimen/dip40"
+                        android:textOff="Off"
+                        android:textOn="On" />
+
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/px1"
+                    android:layout_below="@id/ly_scan_mode"
+                    android:background="@color/gray" />
+
+                <!-- Lamp control -->
+                <LinearLayout
+                    android:id="@+id/ly_lamp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/ly_scan_mode">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="灯控制:"
+                        android:textAppearance="?android:textAppearanceMedium" />
+
+                    <ToggleButton
+                        android:id="@+id/toggle_button_manual_lamp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="@dimen/dip40"
+                        android:textOff="Off"
+                        android:textOn="On" />
+
+                </LinearLayout>
+
+                <View
+                    android:id="@+id/view_lamp_onoff"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/px1"
+                    android:layout_below="@id/ly_lamp"
+                    android:background="@color/gray" />
+
+                <!-- PGA (Gain) -->
+                <LinearLayout
+                    android:id="@+id/ly_pga"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/ly_lamp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="增益系数(PGA):"
+                        android:textAppearance="?android:textAppearanceMedium" />
+
+                    <EditText
+                        android:id="@+id/et_manual_pga"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:ems="4"
+                        android:imeOptions="actionDone"
+                        android:inputType="number"
+                        android:singleLine="true"
+                        android:text="1"
+                        android:hint="1,2,4,8,16,32,64" />
+
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/px1"
+                    android:layout_below="@id/ly_pga"
+                    android:background="@color/gray" />
+
+                <!-- Scan repeat (Average) -->
+                <LinearLayout
+                    android:id="@+id/ly_repeat"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/ly_pga"
+                    android:gravity="center"
+                    android:minHeight="@dimen/dip40">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="平均采集次数:"
+                        android:textAppearance="?android:textAppearanceMedium" />
+
+                    <EditText
+                        android:id="@+id/et_manual_repead"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:ems="4"
+                        android:imeOptions="actionDone"
+                        android:inputType="number"
+                        android:singleLine="true"
+                        android:text="6"
+                        android:hint="1-50" />
+
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/px1"
+                    android:layout_below="@id/ly_repeat"
+                    android:background="@color/gray" />
+
+                <!-- Scan configuration -->
+                <LinearLayout
+                    android:id="@+id/ly_conf_manual"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/ly_repeat"
+                    android:gravity="center"
+                    android:minHeight="@dimen/dip40">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="扫描配置:"
+                        android:textAppearance="?android:textAppearanceMedium" />
+
+                    <TextView
+                        android:id="@+id/tv_manual_scan_conf"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="--"
+                        android:textAppearance="?android:textAppearanceMedium" />
+
+                </LinearLayout>
+
+            </RelativeLayout>
+        </ScrollView>
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btn_scan"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/dip48"
+        android:layout_marginTop="@dimen/dip8"
+        android:background="@android:color/holo_orange_dark"
+        android:text="开始扫描"
+        android:textColor="@color/white" />
+
+</LinearLayout>
