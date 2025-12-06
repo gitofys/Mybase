@@ -2846,12 +2846,12 @@ public class ScanViewActivity extends Activity {
             return;
         }
         
-        // Create dialog view programmatically
+        // 以编程方式创建对话框视图
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(50, 40, 50, 10);
         
-        // Warmup time input
+        // 预热时间输入
         TextView tv_warmup_label = new TextView(this);
         tv_warmup_label.setText("预热时间（秒）:");
         layout.addView(tv_warmup_label);
@@ -2862,7 +2862,7 @@ public class ScanViewActivity extends Activity {
         et_warmup_time.setHint("输入预热时间");
         layout.addView(et_warmup_time);
         
-        // Lamp mode spinner
+        // 灯模式选择器
         TextView tv_mode_label = new TextView(this);
         tv_mode_label.setText("灯模式:");
         tv_mode_label.setPadding(0, 20, 0, 10);
@@ -2876,7 +2876,7 @@ public class ScanViewActivity extends Activity {
         spinner_lamp_mode.setSelection(currentLampMode.ordinal());
         layout.addView(spinner_lamp_mode);
         
-        // Start warmup button
+        // 开始预热按钮
         Button btn_start_warmup = new Button(this);
         btn_start_warmup.setText("开始预热");
         btn_start_warmup.setPadding(0, 20, 0, 0);
@@ -2921,9 +2921,7 @@ public class ScanViewActivity extends Activity {
         dialog.show();
     }
     
-    /**
-     * 应用灯模式
-     */
+    // 应用灯模式
     private void applyLampMode() {
         if (!connected) return;
         
@@ -2940,9 +2938,7 @@ public class ScanViewActivity extends Activity {
         }
     }
     
-    /**
-     * 开始预热
-     */
+    // 开始预热
     private void startWarmup(int seconds) {
         if (!connected) {
             Toast.makeText(this, "请先连接设备", Toast.LENGTH_SHORT).show();
@@ -2957,10 +2953,10 @@ public class ScanViewActivity extends Activity {
         isWarmupInProgress = true;
         warmupTimeSeconds = seconds;
         
-        // Turn on lamp
+        // 打开灯
         ISCNIRScanSDK.ControlLamp(ISCNIRScanSDK.LampState.ON);
         
-        // Disable UI interactions
+        // 禁用UI交互
         setActivityTouchDisable(true);
         if (btn_scan != null) {
             btn_scan.setEnabled(false);
@@ -2969,12 +2965,12 @@ public class ScanViewActivity extends Activity {
             btn_lamp_settings.setEnabled(false);
         }
         
-        // Show countdown
+        // 显示倒计时
         if (tv_warmup_countdown != null) {
             tv_warmup_countdown.setVisibility(View.VISIBLE);
         }
         
-        // Start countdown
+        // 开始倒计时
         final int[] remainingSeconds = {seconds};
         warmupCountdownRunnable = new Runnable() {
             @Override
@@ -2986,13 +2982,13 @@ public class ScanViewActivity extends Activity {
                     remainingSeconds[0]--;
                     warmupHandler.postDelayed(this, 1000);
                 } else {
-                    // Warmup complete
+                    // 预热完成
                     isWarmupInProgress = false;
                     if (tv_warmup_countdown != null) {
                         tv_warmup_countdown.setVisibility(View.GONE);
                     }
                     
-                    // Re-enable UI interactions
+                    // 重新启用UI交互
                     setActivityTouchDisable(false);
                     if (btn_scan != null && connected) {
                         btn_scan.setEnabled(true);
@@ -3029,9 +3025,7 @@ public class ScanViewActivity extends Activity {
         alertDialog.show();
     }
     
-    /**
-     * 返回此页面时应获取活动配置索引
-     */
+    // 返回此页面时应获取活动配置索引
     private void GetActiveConfigOnResume()
     {
         ScanConfigList_from_ScanConfiguration = ScanConfigurationsViewActivity.bufconfigs;//from scan configuration
@@ -3124,10 +3118,7 @@ public class ScanViewActivity extends Activity {
             ISCNIRScanSDK.GetActiveConfig();
         }
     }
-    /*
-     * When the activity is destroyed, unregister all broadcast receivers, remove handler callbacks,
-     * and store all user preferences
-     */
+    // Activity销毁时，注销所有广播接收器，移除Handler回调，并存储所有用户偏好设置
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -3172,7 +3163,7 @@ public class ScanViewActivity extends Activity {
     @Override
     public void onPause() {
         super.onPause();
-        //back to desktop,should disconnect to device
+        // 返回桌面时，应断开设备连接
         if(!GotoOtherPage)
             finish();
     }
@@ -3183,10 +3174,7 @@ public class ScanViewActivity extends Activity {
         }
     }
 
-    /**
-     * 处理断开连接事件的广播接收器
-     * 如果Nano断开连接，将显示提示消息，允许用户重新连接
-     */
+    // 处理断开连接事件的广播接收器，如果Nano断开连接，将显示提示消息，允许用户重新连接
     public class DisconnReceiver extends BroadcastReceiver {
 
         @Override
@@ -3201,9 +3189,7 @@ public class ScanViewActivity extends Activity {
         }
     }
     
-    /**
-     * 设置Activity触摸禁用状态
-     */
+    // 设置Activity触摸禁用状态
     private void setActivityTouchDisable(boolean value) {
         if (value) {
             getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE, WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
@@ -3212,16 +3198,12 @@ public class ScanViewActivity extends Activity {
         }
     }
     
-    /**
-     * 显示最大模式数（已移除，为保持兼容性保留但无操作）
-     */
+    // 显示最大模式数（已移除，为保持兼容性保留但无操作）
     private void UI_ShowMaxPattern()
     {
     }
     
-    /**
-     * 设置设备物理按钮状态
-     */
+    // 设置设备物理按钮状态
     private void SetDeviceButtonStatus()
     {
         if(isExtendVer_PLUS || isExtendVer || (!isExtendVer_PLUS && !isExtendVer && fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_1)>0))
@@ -3238,24 +3220,17 @@ public class ScanViewActivity extends Activity {
             }
         }
     }
-    /**
-     * 获取用户可以设置的最大模式数
-     */
+    // 获取用户可以设置的最大模式数
     private int GetMaxPattern(int start_nm, int end_nm, int width_index, int num_repeat, int scan_type, int IsEXTver)
     {
         return ISCNIRScanSDK.GetMaxPatternJNI(scan_type,start_nm,end_nm,width_index,num_repeat,SpectrumCalCoefficients,IsEXTver);
     }
-    /**
-     * 将扫描配置转换为字节数组（已移除，为保持兼容性返回null）
-     */
+    // 将扫描配置转换为字节数组（已移除，为保持兼容性返回null）
     public byte[] ChangeScanConfigToByte()
     {
         return null;
     }
-    /**
-     * 比较设备的配置和用户设置是否相同
-     * @param EXTRA_DATA 扫描配置字节数据
-     */
+    // 比较设备的配置和用户设置是否相同
     public Boolean Compareconfig(byte EXTRA_DATA[])
     {
         if(EXTRA_DATA.length != 155)
@@ -3356,10 +3331,7 @@ public class ScanViewActivity extends Activity {
         reference_set_config = true;
         ISCNIRScanSDK.SetReferenceParameter(MINWAV,MAXWAV);
     }
-    /**
-     * 对设备执行扫描
-     * @param delaytime 设置延迟时间以避免BLE挂起
-     */
+    // 对设备执行扫描，设置延迟时间以避免BLE挂起
     private void PerformScan(long delaytime)
     {
         Handler handler = new Handler();
@@ -3367,18 +3339,16 @@ public class ScanViewActivity extends Activity {
 
             @Override
             public void run() {
-                //Send broadcast START_SCAN will trigger to scan data
+                // 发送START_SCAN广播将触发扫描数据
                 ISCNIRScanSDK.StartScan();
             }}, delaytime);
     }
     
     // 接收器
-    /**
-     * 成功设置灯状态（需要调用ISCNIRScanSDK.LampState）
-     */
+    // 成功设置灯状态（需要调用ISCNIRScanSDK.LampState）
     public class ReturnSetLampReceiver extends BroadcastReceiver {
         public void onReceive(Context context, Intent intent) {
-            //Complete set lamp on,off,auto
+            // 完成设置灯状态（打开/关闭/自动）
             switch (Lamp_Info)
             {
                 case ManualLamp:
@@ -3400,17 +3370,13 @@ public class ScanViewActivity extends Activity {
             }
         }
     }
-    /**
-     * 成功设置PGA（需要调用ISCNIRScanSDK.SetPGA）
-     */
+    // 成功设置PGA（需要调用ISCNIRScanSDK.SetPGA）
     public class ReturnSetPGAReceiver extends BroadcastReceiver {
         public void onReceive(Context context, Intent intent) {
-            //Complete set pga
+            // 完成设置PGA
         }
     }
-    /**
-     * 成功设置扫描重复次数（需要调用ISCNIRScanSDK.setScanAverage）
-     */
+    // 成功设置扫描重复次数（需要调用ISCNIRScanSDK.setScanAverage）
     public class ReturnSetScanRepeatsReceiver extends BroadcastReceiver {
         public void onReceive(Context context, Intent intent) {
             // 完成设置扫描重复次数
