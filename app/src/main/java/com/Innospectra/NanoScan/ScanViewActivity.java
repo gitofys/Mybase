@@ -1693,9 +1693,7 @@ public class ScanViewActivity extends Activity {
             return false;
         }
     };
-    /**
-     * Get PGA(ISCNIRScanSDK.GetPGA()should be called and TIVA should � 2.5.x)
-     */
+    // 获取PGA（需要调用ISCNIRScanSDK.GetPGA()，TIVA应为 �      2.5.x）
     public class GetPGAReceiver extends BroadcastReceiver {
         public void onReceive(Context context, Intent intent) {
 
