@@ -13,17 +13,34 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.ProgressBar;
+import android.widget.SimpleAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.ISCSDK.ISCNIRScanSDK;
 import com.Innospectra.ISCScanNano.R;
 
-// 设备状态界面Activity：控制Nano设备状态视图
-// 包括温度/湿度、电池百分比等信息
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static com.Innospectra.NanoScan.ScanViewActivity.isExtendVer;
+import static com.Innospectra.NanoScan.ScanViewActivity.isExtendVer_PLUS;
+
+// 统一设备状态界面Activity：合并设备信息、设备状态和错误状态
 public class DeviceStatusViewActivity extends Activity {
     private static Context mContext;
+    // 设备信息
+    private TextView tv_manuf;
+    private TextView tv_model;
+    private TextView tv_serial;
+    private TextView tv_hw;
+    private TextView tv_tiva;
+    // 设备状态
     private TextView tv_batt;
     private TextView tv_temp;
     private TextView tv_humid;
@@ -31,7 +48,13 @@ public class DeviceStatusViewActivity extends Activity {
     Button btn_update_thresholds;
     private Button btn_device_status;
     private Button btn_error_status;
+    private Button btn_clear_error;
+    // 列表视图
+    private ListView device_status_listview;
+    private ListView error_status_listview;
+    private LinearLayout ll_error_status_container;
     private BroadcastReceiver mStatusReceiver;
+    private BroadcastReceiver DeviceInfoReceiver;
     private final BroadcastReceiver DisconnReceiver = new DisconnReceiver();
     private final BroadcastReceiver BackgroundReciver = new BackGroundReciver();
     private final IntentFilter disconnFilter = new IntentFilter(ISCNIRScanSDK.ACTION_GATT_DISCONNECTED);
@@ -45,7 +68,7 @@ public class DeviceStatusViewActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_device_status);
+        setContentView(R.layout.activity_unified_device_status);
         mContext = this;
         // 设置ActionBar标题并启用返回按钮
         ActionBar ab = getActionBar();
@@ -53,6 +76,14 @@ public class DeviceStatusViewActivity extends Activity {
             ab.setDisplayHomeAsUpEnabled(true);
             ab.setTitle(getString(R.string.device_status));
         }
+        // 初始化设备信息视图
+        tv_manuf = (TextView) findViewById(R.id.tv_manuf);
+        tv_model = (TextView) findViewById(R.id.tv_model);
+        tv_serial = (TextView) findViewById(R.id.tv_serial);
+        tv_hw = (TextView) findViewById(R.id.tv_hw);
+        tv_tiva = (TextView) findViewById(R.id.tv_tiva);
+        
+        // 初始化设备状态视图
         tv_batt = (TextView)findViewById(R.id.tv_batt);
         tv_temp = (TextView)findViewById(R.id.tv_temp);
         tv_humid = (TextView)findViewById(R.id.tv_humid);
@@ -60,14 +91,39 @@ public class DeviceStatusViewActivity extends Activity {
         btn_update_thresholds = (Button) findViewById(R.id.btn_update_thresholds);
         btn_device_status = (Button)findViewById(R.id.btn_device_status);
         btn_error_status = (Button)findViewById(R.id.btn_error_status);
+        btn_clear_error = (Button)findViewById(R.id.btn_clear_error);
+        
+        // 初始化列表视图
+        device_status_listview = (ListView) findViewById(R.id.device_status_listview);
+        error_status_listview = (ListView) findViewById(R.id.error_status_listview);
+        ll_error_status_container = (LinearLayout) findViewById(R.id.ll_error_status_container);
 
         btn_update_thresholds.setOnClickListener(Update_Threshold_Click);
         btn_device_status.setOnClickListener(Device_Status_Click);
         btn_error_status.setOnClickListener(Error_Status_Click);
+        btn_clear_error.setOnClickListener(Clear_Error_Click);
 
-        // 从设备获取设备状态信息
+        // 同时获取设备信息和设备状态
+        ISCNIRScanSDK.GetDeviceInfo();
         ISCNIRScanSDK.GetDeviceStatus();
         setActivityTouchDisable(true);
+        
+        // 初始化设备信息接收器
+        DeviceInfoReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                tv_manuf.setText(intent.getStringExtra(ISCNIRScanSDK.EXTRA_MANUF_NAME).replace("\n", ""));
+                tv_model.setText(intent.getStringExtra(ISCNIRScanSDK.EXTRA_MODEL_NUM).replace("\n", ""));
+                String SerialNumber = intent.getStringExtra(ISCNIRScanSDK.EXTRA_SERIAL_NUM);
+                if((isExtendVer||isExtendVer_PLUS)&& SerialNumber.length()>8)
+                    SerialNumber = SerialNumber.substring(0,8);
+                else if(!isExtendVer_PLUS &&!isExtendVer && SerialNumber.length()>7)
+                    SerialNumber = SerialNumber.substring(0,7);
+                tv_serial.setText(SerialNumber);
+                tv_hw.setText(intent.getStringExtra(ISCNIRScanSDK.EXTRA_HW_REV));
+                tv_tiva.setText(intent.getStringExtra(ISCNIRScanSDK.EXTRA_TIVA_REV));
+            }
+        };
         // 设置设备状态信息接收器（需要调用ISCNIRScanSDK.GetDeviceStatus()）
         mStatusReceiver = new BroadcastReceiver() {
             @Override
@@ -89,7 +145,8 @@ public class DeviceStatusViewActivity extends Activity {
                 setActivityTouchDisable(false);
             }
         };
-        // 注册断开连接事件和设备状态信息的接收器
+        // 注册所有接收器
+        LocalBroadcastManager.getInstance(mContext).registerReceiver(DeviceInfoReceiver, new IntentFilter(ISCNIRScanSDK.ACTION_INFO));
         LocalBroadcastManager.getInstance(mContext).registerReceiver(mStatusReceiver, new IntentFilter(ISCNIRScanSDK.ACTION_STATUS));
         LocalBroadcastManager.getInstance(mContext).registerReceiver(DisconnReceiver, disconnFilter);
         LocalBroadcastManager.getInstance(mContext).registerReceiver(BackgroundReciver, new IntentFilter(NOTIFY_BACKGROUND));
@@ -130,11 +187,13 @@ public class DeviceStatusViewActivity extends Activity {
     {
         @Override
         public void onClick(View view) {
-            GotoOtherPage = true;
-            Intent graphIntent = new Intent(mContext, AdvanceDeviceStatusViewActivity.class);
-            graphIntent.putExtra("DEVSTATUS", devStatus);
-            graphIntent.putExtra("DEVBYTE",devbyte);
-            startActivity(graphIntent);
+            // 切换设备状态详情列表的显示/隐藏
+            if (device_status_listview.getVisibility() == View.VISIBLE) {
+                device_status_listview.setVisibility(View.GONE);
+            } else {
+                device_status_listview.setVisibility(View.VISIBLE);
+                showDeviceStatusDetail();
+            }
         }
     };
 
@@ -142,13 +201,114 @@ public class DeviceStatusViewActivity extends Activity {
     {
         @Override
         public void onClick(View view) {
-            GotoOtherPage = true;
-            Intent graphIntent = new Intent(mContext, ErrorStatusViewActivity.class);
-            graphIntent.putExtra("ERRSTATUS", errorStatus);
-            graphIntent.putExtra("ERRBYTE",errbyte);
-            startActivity(graphIntent);
+            // 切换错误状态列表的显示/隐藏
+            if (ll_error_status_container.getVisibility() == View.VISIBLE) {
+                ll_error_status_container.setVisibility(View.GONE);
+            } else {
+                ll_error_status_container.setVisibility(View.VISIBLE);
+                showErrorStatusDetail();
+            }
         }
     };
+    
+    private Button.OnClickListener Clear_Error_Click = new Button.OnClickListener()
+    {
+        @Override
+        public void onClick(View view) {
+            ISCNIRScanSDK.ClearDeviceError();
+            showErrorStatusDetail(); // 刷新错误状态显示
+        }
+    };
+    
+    // 显示设备状态详情
+    private void showDeviceStatusDetail() {
+        if (devbyte == null || devbyte.length == 0) return;
+        
+        int data = devbyte[0];
+        int tiva = 0x00000001;
+        int[] images = { R.drawable.leg_gray, R.drawable.leg_gray, R.drawable.leg_gray,
+                R.drawable.leg_gray, R.drawable.leg_gray, R.drawable.leg_gray, R.drawable.leg_gray};
+
+        for(int j=0;j<2;j++)
+        {
+            int ret = data & tiva;
+            if(ret == tiva)
+            {
+                images[j] = R.drawable.led_g;
+            }
+            tiva = tiva<<1;
+        }
+        tiva = tiva<<2;
+        for(int j=2;j<6;j++)
+        {
+            int ret = data & tiva;
+            if(ret == tiva)
+            {
+                images[j] = R.drawable.led_g;
+            }
+            tiva = tiva<<1;
+        }
+        data = devbyte[1];
+        if(data!=0)
+            images[6] = R.drawable.led_g;
+        
+        String[] title = { "Tiva", "Scanning", "BLE stack", "BLE connection", "Scan Data Interpreting", "Scan Button Pressed", "Battery in charge"};
+        images[0] = R.drawable.led_g;
+        List<Map<String, Object>> list = new ArrayList<Map<String, Object>>();
+        for (int i = 0; i < images.length; i++) {
+            Map<String, Object> map = new HashMap<String, Object>();
+            map.put("images", images[i]);
+            map.put("title", title[i]);
+            list.add(map);
+        }
+        SimpleAdapter adapter = new SimpleAdapter(this, list,
+                R.layout.advance_device_status_item, new String[] { "images", "title" }, new int[] {
+                R.id.image, R.id.text });
+        device_status_listview.setAdapter(adapter);
+    }
+    
+    // 显示错误状态详情
+    private void showErrorStatusDetail() {
+        if (errbyte == null || errbyte.length == 0) return;
+        
+        int[] images = { R.drawable.leg_gray, R.drawable.leg_gray, R.drawable.leg_gray,
+                R.drawable.leg_gray, R.drawable.leg_gray, R.drawable.leg_gray, R.drawable.leg_gray,R.drawable.leg_gray,R.drawable.leg_gray,R.drawable.leg_gray,R.drawable.leg_gray,R.drawable.leg_gray};
+        String[] title = { "Scan", "ADC", "EEPROM", "Bluetooth", "Spectrum Library", "Hardware","TMP006" ,"HDC1000","Battery","Memory","UART","System"};
+        
+        int data = errbyte[0]&0xFF | (errbyte[1] << 8);
+        int error_scan = 0x00000001;
+        for(int j=0;j<2;j++)
+        {
+            int ret = data & error_scan;
+            if(ret == error_scan)
+            {
+                images[j] = R.drawable.led_r;
+            }
+            error_scan = error_scan<<1;
+        }
+        error_scan = error_scan<<1;
+        for(int j=2;j<12;j++)
+        {
+            int ret = data & error_scan;
+            if(ret == error_scan)
+            {
+                images[j] = R.drawable.led_r;
+            }
+            error_scan = error_scan<<1;
+        }
+        
+        List<Map<String, Object>> list = new ArrayList<Map<String, Object>>();
+        for (int i = 0; i < images.length; i++) {
+            Map<String, Object> map = new HashMap<String, Object>();
+            map.put("images", images[i]);
+            map.put("title", title[i]);
+            list.add(map);
+        }
+        SimpleAdapter adapter = new SimpleAdapter(this, list,
+                R.layout.activity_error_status_item, new String[] { "images", "title" }, new int[] {
+                R.id.image, R.id.error_test });
+        error_status_listview.setAdapter(adapter);
+    }
     // 按钮事件处理结束
     // Activity恢复时调用父类方法
     @Override
@@ -157,12 +317,18 @@ public class DeviceStatusViewActivity extends Activity {
         GotoOtherPage = false;
     }
 
-    // Activity销毁时，注销处理断开连接和状态事件的BroadcastReceiver
+    // Activity销毁时，注销所有BroadcastReceiver
     @Override
     public void onDestroy(){
         super.onDestroy();
-        LocalBroadcastManager.getInstance(mContext).unregisterReceiver(mStatusReceiver);
+        if (DeviceInfoReceiver != null) {
+            LocalBroadcastManager.getInstance(mContext).unregisterReceiver(DeviceInfoReceiver);
+        }
+        if (mStatusReceiver != null) {
+            LocalBroadcastManager.getInstance(mContext).unregisterReceiver(mStatusReceiver);
+        }
         LocalBroadcastManager.getInstance(mContext).unregisterReceiver(DisconnReceiver);
+        LocalBroadcastManager.getInstance(mContext).unregisterReceiver(BackgroundReciver);
     }
 
     @Override

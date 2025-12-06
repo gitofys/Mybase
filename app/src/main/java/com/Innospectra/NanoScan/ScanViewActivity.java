@@ -62,6 +62,8 @@ import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.formatter.IAxisValueFormatter;
+import com.github.mikephil.charting.components.AxisBase;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 import com.opencsv.CSVWriter;
 import java.io.ByteArrayOutputStream;
@@ -260,7 +262,7 @@ public class ScanViewActivity extends Activity {
     private TextView tv_manual_scan_conf;
     private LinearLayout ly_manual_conf;
     private ToggleButton toggle_button_manual_scan_mode;
-    private ToggleButton toggle_button_manual_lamp;
+    private Spinner spinner_lamp_mode; // 灯控制模式选择器（打开、关闭、自动）
     private EditText et_manual_lamptime;
     private EditText et_manual_pga;
     private EditText et_manual_repead;
@@ -340,10 +342,11 @@ public class ScanViewActivity extends Activity {
         storeBooleanPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.LockButton,false);
 
         calProgress = (ProgressBar) findViewById(R.id.calProgress);
-        calProgress.setVisibility(View.VISIBLE);
+        calProgress.setVisibility(View.GONE); // 初始隐藏，有数据加载时才显示
         progressBarinsideText = (TextView)findViewById(R.id.progressBarinsideText);
         connected = false;
-        Disable_Stop_Continous_button();
+        // 暂时放开按钮锁定，便于测试
+        // Disable_Stop_Continous_button();
 
         // 初始化连接状态和灯控制UI
         tv_connection_status = (TextView) findViewById(R.id.tv_connection_status);
@@ -362,22 +365,19 @@ public class ScanViewActivity extends Activity {
                 }
             });
         }
+        // 取消主界面上的灯控制按钮，改到配置里
         if (btn_lamp_settings != null) {
-            btn_lamp_settings.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    showLampSettingsMenu();
-                }
-            });
+            btn_lamp_settings.setVisibility(View.GONE);
         }
 
         filePrefix = (EditText) findViewById(R.id.et_prefix);
         btn_scan = (Button) findViewById(R.id.btn_scan);
 
+        // 未连接时锁定扫描按钮（灰色）
         btn_scan.setClickable(false);
+        btn_scan.setEnabled(false);
         btn_scan.setBackgroundColor(ContextCompat.getColor(mContext, R.color.btn_unavailable));
         btn_scan.setOnClickListener(Button_Scan_Click);
-        setActivityTouchDisable(true);
 
         // 初始化手动模式组件
         InitialManualComponent();
@@ -442,12 +442,18 @@ public class ScanViewActivity extends Activity {
         }
         else if(android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
         {
-            boolean hasPermission = (ContextCompat.checkSelfPermission(this,
-                    Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED);
-            if (!hasPermission) {
+            // Android 12+ (API 31+) 需要BLUETOOTH_SCAN和BLUETOOTH_CONNECT权限
+            boolean hasBluetoothScan = (ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED);
+            boolean hasBluetoothConnect = (ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED);
+            
+            if (!hasBluetoothScan || !hasBluetoothConnect) {
                 ActivityCompat.requestPermissions(ScanViewActivity.this,
-                        new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                                Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.INTERNET,
+                        new String[]{
+                                Manifest.permission.BLUETOOTH_SCAN,
+                                Manifest.permission.BLUETOOTH_CONNECT,
+                                Manifest.permission.INTERNET
                         },
                         REQUEST_WRITE_STORAGE);
             }
@@ -513,7 +519,24 @@ public class ScanViewActivity extends Activity {
             // 初始化蓝牙，如果BLE不可用则结束
             if (!mNanoBLEService.initialize()) {
                 finish();
+                return;
             }
+            
+            // 检查蓝牙权限（Android 12+需要）
+            if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                boolean hasBluetoothScan = (ContextCompat.checkSelfPermission(ScanViewActivity.this,
+                        Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED);
+                boolean hasBluetoothConnect = (ContextCompat.checkSelfPermission(ScanViewActivity.this,
+                        Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED);
+                
+                if (!hasBluetoothScan || !hasBluetoothConnect) {
+                    Toast.makeText(ScanViewActivity.this, "需要蓝牙权限才能扫描设备", Toast.LENGTH_SHORT).show();
+                    // 重新请求权限
+                    checkPermissions();
+                    return;
+                }
+            }
+            
             // 开始扫描匹配DEVICE_NAME的设备
             final BluetoothManager bluetoothManager =
                     (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
@@ -522,6 +545,7 @@ public class ScanViewActivity extends Activity {
             if(mBluetoothLeScanner == null){
                 finish();
                 Toast.makeText(ScanViewActivity.this, "请确保蓝牙已开启并重试", Toast.LENGTH_SHORT).show();
+                return;
             }
             mHandler = new Handler();
             // 始终直接扫描目标设备
@@ -557,6 +581,13 @@ public class ScanViewActivity extends Activity {
                     storeStringPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.preferredDevice, device.getAddress());
                     storeStringPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.preferredDeviceModel, name);
                     connected = true;
+            // 连接后启用扫描按钮（红色）
+            if (btn_scan != null) {
+                btn_scan.setClickable(true);
+                btn_scan.setEnabled(true);
+                // 连接后，按钮变为红色
+                btn_scan.setBackgroundColor(ContextCompat.getColor(mContext, R.color.red));
+            }
                     scanTargetDevice(false);
                 }
             }
@@ -636,6 +667,12 @@ public class ScanViewActivity extends Activity {
     public class NotifyCompleteReceiver extends BroadcastReceiver {
         public void onReceive(Context context, Intent intent) {
             connected = true;
+            // 连接后启用扫描按钮（红色）
+            if (btn_scan != null) {
+                btn_scan.setClickable(true);
+                btn_scan.setEnabled(true);
+                btn_scan.setBackgroundColor(ContextCompat.getColor(mContext, R.color.red));
+            }
             updateConnectionStatus("已连接");
             if (btn_connect_device != null) {
                 btn_connect_device.setEnabled(false);
@@ -665,6 +702,8 @@ public class ScanViewActivity extends Activity {
                      // 获取活动配置
 		            ISCNIRScanSDK.ShouldDownloadCoefficient = false;
 		            ISCNIRScanSDK.SetCurrentTime();
+		            // 从存储的校准数据绘制参考图线
+		            drawReferenceLine();
                 }
                 else
                 {
@@ -736,6 +775,9 @@ public class ScanViewActivity extends Activity {
             storeCalibration.device = preferredDevice;
             storeCalibration.storrefCoeff = refCoeff;
             storeCalibration.storerefMatrix = refMatrix;
+            
+            // 下载参考数据后，绘制参考图线
+            drawReferenceLine();
         }
     }
     // 发送GET_ACTIVE_CONF广播，获取活动配置（需要调用ISCNIRScanSDK.GetActiveConfig()）
@@ -1158,8 +1200,9 @@ public class ScanViewActivity extends Activity {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_new_scan, menu);
         mMenu = menu;
-        mMenu.findItem(R.id.action_settings).setEnabled(false);
-        mMenu.findItem(R.id.action_key).setEnabled(false);
+        // 不锁定右上角的设置和信息按钮
+        // mMenu.findItem(R.id.action_settings).setEnabled(false);
+        // mMenu.findItem(R.id.action_key).setEnabled(false);
         return true;
     }
 
@@ -1262,16 +1305,41 @@ public class ScanViewActivity extends Activity {
         
         XAxis xAxis = chart.getXAxis();
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
+        xAxis.setEnabled(true); // 启用X轴
+        xAxis.setDrawLabels(true); // 确保X轴标签显示
+        xAxis.setDrawAxisLine(true); // 绘制X轴线
+        xAxis.setDrawGridLines(true); // 绘制网格线
         xAxis.setAxisMaximum(maxWavelength);
         xAxis.setAxisMinimum(minWavelength);
+        xAxis.setGranularity(100f); // 设置标签间隔为100nm
+        xAxis.setLabelCount(9, true); // 设置标签数量，自动分布
+        // X轴直接显示波长（nm），不转换为波数
+        xAxis.setValueFormatter(new IAxisValueFormatter() {
+            @Override
+            public String getFormattedValue(float value, AxisBase axis) {
+                // 直接显示波长值
+                return String.format("%.0f", value);
+            }
+        });
+        xAxis.setTextSize(12f); // 增大文本大小以便显示
+        xAxis.setTextColor(Color.BLACK); // 设置文本颜色
+        xAxis.setGridLineWidth(1f);
+        xAxis.setAxisLineWidth(1f); // 设置轴线宽度
         
         YAxis leftAxis = chart.getAxisLeft();
+        leftAxis.setEnabled(true); // 启用Y轴
         leftAxis.enableGridDashedLine(10f, 10f, 0f);
         leftAxis.setDrawLimitLinesBehindData(true);
-        // 设置强度模式的默认Y轴范围（数据到达时将更新）
-        leftAxis.setAxisMaximum(1000f);
-        leftAxis.setAxisMinimum(0f);
-        leftAxis.setStartAtZero(true);
+        leftAxis.setDrawLabels(true); // 确保Y轴标签显示
+        leftAxis.setDrawAxisLine(true); // 绘制Y轴线
+        leftAxis.setDrawGridLines(true); // 绘制网格线
+        leftAxis.setTextSize(12f); // 增大文本大小以便显示
+        leftAxis.setTextColor(Color.BLACK); // 设置文本颜色
+        leftAxis.setGridLineWidth(1f);
+        leftAxis.setAxisLineWidth(1f); // 设置轴线宽度
+        // Y轴范围将根据数据自动调整
+        leftAxis.setStartAtZero(false); // 不强制从0开始，根据数据范围自动调整
+        // Y轴标签将在updateChartDisplay中根据显示模式设置
         
         chart.getAxisRight().setEnabled(false);
         
@@ -1279,41 +1347,63 @@ public class ScanViewActivity extends Activity {
         l.setForm(Legend.LegendForm.LINE);
         chart.getLegend().setEnabled(false);
         
-        // 添加默认占位线（y=0的水平线），实际扫描数据到达时将被替换
-        ArrayList<Entry> defaultEntries = new ArrayList<>();
-        // Create two points to draw a horizontal line across the wavelength range
-        defaultEntries.add(new Entry(minWavelength, 0f));
-        defaultEntries.add(new Entry(maxWavelength, 0f));
+        // 设置图表描述
+        chart.getDescription().setText("波长 (nm)");
+        chart.getDescription().setEnabled(true);
+        chart.getDescription().setPosition(chart.getWidth() - 200f, 30f);
+        chart.getDescription().setTextSize(12f);
         
-        LineDataSet defaultDataSet = new LineDataSet(defaultEntries, "");
-        defaultDataSet.setColor(Color.GRAY);
-        defaultDataSet.setLineWidth(1f);
-        defaultDataSet.setDrawCircles(false);
-        defaultDataSet.setDrawValues(false);
-        defaultDataSet.setDrawFilled(false);
-        
-        ArrayList<ILineDataSet> dataSets = new ArrayList<>();
-        dataSets.add(defaultDataSet);
-        LineData defaultData = new LineData(dataSets);
-        chart.setData(defaultData);
-        chart.invalidate();
+        // 初始化时绘制y=0的直线
+        drawZeroLineForChart(chart);
     }
     
     // 根据选中的模式更新图表显示
     private void updateChartDisplay() {
-        if (mMainChart == null || mXValues == null || mXValues.isEmpty()) return;
+        if (mMainChart == null) return;
         
         try {
+            // 更新X轴范围（固定为900~1700）
+            XAxis xAxis = mMainChart.getXAxis();
+            xAxis.setAxisMaximum(maxWavelength);
+            xAxis.setAxisMinimum(minWavelength);
+            xAxis.setGranularity(100f); // 设置标签间隔为100nm
+            xAxis.setLabelCount(9, true); // 设置标签数量，自动分布
+            
+            if (mXValues == null || mXValues.isEmpty()) return;
+            
             int numSections = 1;
             if (Scan_Config_Info != null && Scan_Config_Info.numSections != null && Scan_Config_Info.numSections.length > 0) {
                 numSections = Scan_Config_Info.numSections[0];
             }
             
+            YAxis leftAxis = mMainChart.getAxisLeft();
             switch (currentDisplayMode) {
                 case INTENSITY:
-                    mMainChart.getAxisLeft().setAxisMaximum(maxIntensity);
-                    mMainChart.getAxisLeft().setAxisMinimum(minIntensity);
-                    mMainChart.getAxisLeft().setStartAtZero(true);
+                    // Y轴根据数据范围自动调整，添加一些边距
+                    float yRange = maxIntensity - minIntensity;
+                    float yMargin = yRange * 0.1f; // 10%边距
+                    leftAxis.setAxisMaximum(maxIntensity + yMargin);
+                    leftAxis.setAxisMinimum(minIntensity - yMargin);
+                    // 如果最小值接近0，则从0开始
+                    if (minIntensity >= 0 && minIntensity < yRange * 0.1f) {
+                        leftAxis.setAxisMinimum(0f);
+                        leftAxis.setStartAtZero(true);
+                    } else {
+                        leftAxis.setStartAtZero(false);
+                    }
+                    leftAxis.setValueFormatter(new IAxisValueFormatter() {
+                        @Override
+                        public String getFormattedValue(float value, AxisBase axis) {
+                            return String.format("%.0f", value);
+                        }
+                    });
+                    // 设置Y轴描述为"信号强度"
+                    leftAxis.setTextSize(10f);
+                    leftAxis.setAxisLineWidth(1f);
+                    // 通过描述显示坐标轴标签
+                    mMainChart.getDescription().setText("X: 波长 (nm) | Y: 信号强度");
+                    mMainChart.getDescription().setPosition(mMainChart.getWidth() - 250f, 30f);
+                    mMainChart.getDescription().setEnabled(true);
                     if (numSections >= 2 && !Float.isNaN(minIntensity) && !Float.isNaN(maxIntensity) && mIntensityFloat != null && !mIntensityFloat.isEmpty()) {
                         setDataSlew(mMainChart, mIntensityFloat, numSections);
                     } else if (!Float.isNaN(minIntensity) && !Float.isNaN(maxIntensity) && mIntensityFloat != null && !mIntensityFloat.isEmpty()) {
@@ -1321,9 +1411,23 @@ public class ScanViewActivity extends Activity {
                     }
                     break;
                 case ABSORBANCE:
-                    mMainChart.getAxisLeft().setAxisMaximum(maxAbsorbance);
-                    mMainChart.getAxisLeft().setAxisMinimum(minAbsorbance);
-                    mMainChart.getAxisLeft().setStartAtZero(false);
+                    // Y轴根据数据范围自动调整，添加一些边距
+                    float absRange = maxAbsorbance - minAbsorbance;
+                    float absMargin = absRange * 0.1f; // 10%边距
+                    leftAxis.setAxisMaximum(maxAbsorbance + absMargin);
+                    leftAxis.setAxisMinimum(minAbsorbance - absMargin);
+                    leftAxis.setStartAtZero(false);
+                    leftAxis.setValueFormatter(new IAxisValueFormatter() {
+                        @Override
+                        public String getFormattedValue(float value, AxisBase axis) {
+                            return String.format("%.3f", value);
+                        }
+                    });
+                    // 设置Y轴描述为"吸光度"
+                    leftAxis.setTextSize(10f);
+                    mMainChart.getDescription().setText("X: 波长 (nm) | Y: 吸光度");
+                    mMainChart.getDescription().setPosition(mMainChart.getWidth() - 250f, 30f);
+                    mMainChart.getDescription().setEnabled(true);
                     if (numSections >= 2 && !Float.isNaN(minAbsorbance) && !Float.isNaN(maxAbsorbance) && mAbsorbanceFloat != null && !mAbsorbanceFloat.isEmpty()) {
                         setDataSlew(mMainChart, mAbsorbanceFloat, numSections);
                     } else if (!Float.isNaN(minAbsorbance) && !Float.isNaN(maxAbsorbance) && mAbsorbanceFloat != null && !mAbsorbanceFloat.isEmpty()) {
@@ -1331,9 +1435,23 @@ public class ScanViewActivity extends Activity {
                     }
                     break;
                 case REFLECTANCE:
-                    mMainChart.getAxisLeft().setAxisMaximum(maxReflectance);
-                    mMainChart.getAxisLeft().setAxisMinimum(minReflectance);
-                    mMainChart.getAxisLeft().setStartAtZero(false);
+                    // Y轴根据数据范围自动调整，添加一些边距
+                    float refRange = maxReflectance - minReflectance;
+                    float refMargin = refRange * 0.1f; // 10%边距
+                    leftAxis.setAxisMaximum(maxReflectance + refMargin);
+                    leftAxis.setAxisMinimum(minReflectance - refMargin);
+                    leftAxis.setStartAtZero(false);
+                    leftAxis.setValueFormatter(new IAxisValueFormatter() {
+                        @Override
+                        public String getFormattedValue(float value, AxisBase axis) {
+                            return String.format("%.3f", value);
+                        }
+                    });
+                    // 设置Y轴描述为"反射率"
+                    leftAxis.setTextSize(10f);
+                    mMainChart.getDescription().setText("X: 波长 (nm) | Y: 反射率");
+                    mMainChart.getDescription().setPosition(mMainChart.getWidth() - 250f, 30f);
+                    mMainChart.getDescription().setEnabled(true);
                     if (numSections >= 2 && !Float.isNaN(minReflectance) && !Float.isNaN(maxReflectance) && mReflectanceFloat != null && !mReflectanceFloat.isEmpty()) {
                         setDataSlew(mMainChart, mReflectanceFloat, numSections);
                     } else if (!Float.isNaN(minReflectance) && !Float.isNaN(maxReflectance) && mReflectanceFloat != null && !mReflectanceFloat.isEmpty()) {
@@ -1369,19 +1487,39 @@ public class ScanViewActivity extends Activity {
         view_lamp_onoff = (View) findViewById(R.id.view_lamp_onoff);
         tv_manual_scan_conf = (TextView)findViewById(R.id.tv_manual_scan_conf);
         toggle_button_manual_scan_mode = (ToggleButton) findViewById(R.id.toggle_button_manual_scan_mode);
-        toggle_button_manual_lamp = (ToggleButton) findViewById(R.id.toggle_button_manual_lamp);
+        spinner_lamp_mode = (Spinner) findViewById(R.id.spinner_lamp_mode);
         et_manual_lamptime = (EditText) findViewById(R.id.et_manual_lamptime);
         et_manual_pga = (EditText) findViewById(R.id.et_manual_pga);
         et_manual_repead = (EditText) findViewById(R.id.et_manual_repead);
         ly_manual_conf = (LinearLayout)findViewById(R.id.ly_conf_manual);
 
         toggle_button_manual_scan_mode.setOnClickListener(Toggle_Button_Manual_ScanMode_Click);
-        toggle_button_manual_lamp.setOnCheckedChangeListener(Toggle_Button_Manual_Lamp_Changed);
+        
+        // 初始化灯控制模式选择器（三个模式：打开、关闭、自动）
+        if (spinner_lamp_mode != null) {
+            String[] lampModes = {"打开", "关闭", "自动"};
+            ArrayAdapter<String> lampAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, lampModes);
+            lampAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            spinner_lamp_mode.setAdapter(lampAdapter);
+            spinner_lamp_mode.setSelection(currentLampMode.ordinal());
+            spinner_lamp_mode.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                    currentLampMode = LampMode.values()[position];
+                    if (connected) {
+                        applyLampMode();
+                    }
+                }
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {}
+            });
+        }
+        
         et_manual_pga.setOnEditorActionListener(Manual_PGA_OnEditor);
         et_manual_repead.setOnEditorActionListener(Manual_Repeat_OnEditor);
         et_manual_lamptime.setOnEditorActionListener(Manual_Lamptime_OnEditor);
         ly_manual_conf.setOnClickListener(Manual_Config_Click);
-        toggle_button_manual_lamp.setEnabled(false);
+        if (spinner_lamp_mode != null) spinner_lamp_mode.setEnabled(false);
         et_manual_repead.setEnabled(false);
         et_manual_pga.setEnabled(false);
         et_manual_lamptime.setEnabled(false);
@@ -1400,29 +1538,30 @@ public class ScanViewActivity extends Activity {
     }
     private void DisableAllComponent()
     {
+        // 暂时放开所有组件锁定，便于测试
         // Only manual mode is used now - disable manual mode components only
-        LinearLayout layout;
-        
-        // 手动模式组件（在可折叠布局内）
-        layout = (LinearLayout) findViewById(R.id.ll_prefix_manual);
-        if (layout != null) DisableLinearComponet(layout);
-        layout = (LinearLayout) findViewById(R.id.ly_scan_mode);
-        if (layout != null) DisableLinearComponet(layout);
-        layout = (LinearLayout) findViewById(R.id.ly_lamp);
-        if (layout != null) DisableLinearComponet(layout);
-        layout = (LinearLayout) findViewById(R.id.ly_pga);
-        if (layout != null) DisableLinearComponet(layout);
-        layout = (LinearLayout) findViewById(R.id.ly_repeat);
-        if (layout != null) DisableLinearComponet(layout);
-        layout = (LinearLayout) findViewById(R.id.ly_conf_manual);
-        if (layout != null) DisableLinearComponet(layout);
-        
-        // Disable scan button and menu
-        btn_scan.setClickable(false);
-        if (mMenu != null) {
-            mMenu.findItem(R.id.action_settings).setEnabled(false);
-            mMenu.findItem(R.id.action_key).setEnabled(false);
-        }
+        // LinearLayout layout;
+        // 
+        // // 手动模式组件（在可折叠布局内）
+        // layout = (LinearLayout) findViewById(R.id.ll_prefix_manual);
+        // if (layout != null) DisableLinearComponet(layout);
+        // layout = (LinearLayout) findViewById(R.id.ly_scan_mode);
+        // if (layout != null) DisableLinearComponet(layout);
+        // layout = (LinearLayout) findViewById(R.id.ly_lamp);
+        // if (layout != null) DisableLinearComponet(layout);
+        // layout = (LinearLayout) findViewById(R.id.ly_pga);
+        // if (layout != null) DisableLinearComponet(layout);
+        // layout = (LinearLayout) findViewById(R.id.ly_repeat);
+        // if (layout != null) DisableLinearComponet(layout);
+        // layout = (LinearLayout) findViewById(R.id.ly_conf_manual);
+        // if (layout != null) DisableLinearComponet(layout);
+        // 
+        // // Disable scan button and menu
+        // btn_scan.setClickable(false);
+        // if (mMenu != null) {
+        //     mMenu.findItem(R.id.action_settings).setEnabled(false);
+        //     mMenu.findItem(R.id.action_key).setEnabled(false);
+        // }
     }
 
     // 禁用连续扫描停止按钮（已移除）
@@ -1464,7 +1603,7 @@ public class ScanViewActivity extends Activity {
         
         if(toggle_button_manual_scan_mode != null && toggle_button_manual_scan_mode.isChecked() == false)
         {
-            if (toggle_button_manual_lamp != null) toggle_button_manual_lamp.setEnabled(false);
+            if (spinner_lamp_mode != null) spinner_lamp_mode.setEnabled(false);
             if (et_manual_repead != null) et_manual_repead.setEnabled(false);
             if (et_manual_pga != null) et_manual_pga.setEnabled(false);
             if (et_manual_lamptime != null) et_manual_lamptime.setEnabled(true);
@@ -1511,10 +1650,7 @@ public class ScanViewActivity extends Activity {
         }
         if(Current_Scan_Method == ScanMethod.Manual && toggle_button_manual_scan_mode.isChecked())//Manual->Normal,Quickset,Maintain
         {
-            if(toggle_button_manual_lamp.getText().toString().toUpperCase().equals("ON"))
-            {
-                toggle_button_manual_lamp.setChecked(false);//close lamp
-            }
+            // 灯控制已改为使用Spinner，不再需要此逻辑
             ISCNIRScanSDK.ControlLamp(ISCNIRScanSDK.LampState.AUTO);
         }
     }
@@ -1622,40 +1758,33 @@ public class ScanViewActivity extends Activity {
         public void onClick(View v) {
             if(toggle_button_manual_scan_mode.getText().toString().toUpperCase().equals("ON"))
             {
-                toggle_button_manual_lamp.setEnabled(true);
+                // 启用灯控制模式选择器和其他组件
+                if (spinner_lamp_mode != null) {
+                    spinner_lamp_mode.setEnabled(true);
+                    if((HW_Model.equals("R")&&isExtendVer)|| HW_Model.equals("R3")||HW_Model.equals("R11"))
+                        spinner_lamp_mode.setVisibility(View.GONE);
+                    else
+                        spinner_lamp_mode.setSelection(LampMode.ON.ordinal());
+                }
                 et_manual_repead.setEnabled(true);
                 et_manual_pga.setEnabled(true);
                 et_manual_lamptime.setEnabled(false);
-                if((HW_Model.equals("R")&&isExtendVer)|| HW_Model.equals("R3")||HW_Model.equals("R11"))
-                    toggle_button_manual_lamp.setVisibility(View.GONE);
-                else
-                    toggle_button_manual_lamp.setChecked(true);
             }
             else
             {
-                toggle_button_manual_lamp.setEnabled(false);
+                // 禁用灯控制模式选择器，设置为自动模式
+                if (spinner_lamp_mode != null) {
+                    spinner_lamp_mode.setEnabled(false);
+                    spinner_lamp_mode.setSelection(LampMode.AUTO.ordinal());
+                }
                 et_manual_repead.setEnabled(false);
                 et_manual_pga.setEnabled(false);
                 et_manual_lamptime.setEnabled(true);
-                toggle_button_manual_lamp.setChecked(false);
                 ISCNIRScanSDK.ControlLamp(ISCNIRScanSDK.LampState.AUTO);
             }
         }
     };
-    private ToggleButton.OnCheckedChangeListener Toggle_Button_Manual_Lamp_Changed = new ToggleButton.OnCheckedChangeListener() {
-        @Override
-        public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-
-            if(toggle_button_manual_lamp.getText().toString().toUpperCase().equals("OFF"))//OFF->ON
-            {
-                ISCNIRScanSDK.ControlLamp(ISCNIRScanSDK.LampState.ON);
-            }
-            else
-            {
-                ISCNIRScanSDK.ControlLamp(ISCNIRScanSDK.LampState.OFF);
-            }
-        }
-    };
+    // 灯控制已改为使用Spinner，通过OnItemSelectedListener处理
     private EditText.OnEditorActionListener Manual_Lamptime_OnEditor = new EditText.OnEditorActionListener()
     {
         @Override
@@ -1772,18 +1901,24 @@ public class ScanViewActivity extends Activity {
                 }
                 else if(toggle_button_manual_scan_mode.getText().toString().equals("On"))
                 {
-                    DisableAllComponent();
+                    // 暂时放开按钮锁定，便于测试
+                    // DisableAllComponent();
+                    // 开始扫描时，按钮变为绿色
+                    btn_scan.setBackgroundColor(ContextCompat.getColor(mContext, R.color.green));
                     btn_scan.setText("扫描中...");
                     calProgress.setVisibility(View.VISIBLE);
                     PerformScan(delaytime);
                 }
                 else
                 {
+                    // 开始扫描时，按钮变为绿色
+                    btn_scan.setBackgroundColor(ContextCompat.getColor(mContext, R.color.green));
                     PerformScan(delaytime);
                 }
                 
                 // 扫描期间禁用UI
-                DisableAllComponent();
+                // 暂时放开按钮锁定，便于测试
+                // DisableAllComponent();
                 calProgress.setVisibility(View.VISIBLE);
                 btn_scan.setText("扫描中...");
             }
@@ -1794,7 +1929,11 @@ public class ScanViewActivity extends Activity {
     public class ScanStartedReceiver extends BroadcastReceiver {
         public void onReceive(Context context, Intent intent) {
             calProgress.setVisibility(View.VISIBLE);
-            btn_scan.setText("扫描中...");
+            // 扫描开始时，按钮变为绿色
+            if (btn_scan != null) {
+                btn_scan.setBackgroundColor(ContextCompat.getColor(mContext, R.color.green));
+                btn_scan.setText("扫描中...");
+            }
         }
     }
     
@@ -2001,8 +2140,13 @@ public class ScanViewActivity extends Activity {
         calProgress.setVisibility(View.GONE);
         progressBarinsideText.setVisibility(View.GONE);
         btn_scan.setText(getString(R.string.scan));
+        // 扫描结束后，按钮恢复为红色
+        if (btn_scan != null && connected) {
+            btn_scan.setBackgroundColor(ContextCompat.getColor(mContext, R.color.red));
+        }
         EnableAllComponent();
-        Disable_Stop_Continous_button();
+        // 暂时放开按钮锁定，便于测试
+        // Disable_Stop_Continous_button();
         // Tiva版本 <2.1.0.67
         if(!isExtendVer_PLUS && !isExtendVer && fw_level_standard.compareTo(ISCNIRScanSDK.FW_LEVEL_STANDARD.LEVEL_0)==0)
             closeFunction();
@@ -2702,7 +2846,8 @@ public class ScanViewActivity extends Activity {
             @Override
             public void onClick(DialogInterface arg0, int arg1) {
                 PerformScan(0);
-                DisableAllComponent();
+                // 暂时放开按钮锁定，便于测试
+                // DisableAllComponent();
                 calProgress.setVisibility(View.VISIBLE);
                 btn_scan.setText(getString(R.string.scanning));
                 alertDialog.dismiss();
@@ -2955,13 +3100,14 @@ public class ScanViewActivity extends Activity {
         ISCNIRScanSDK.ControlLamp(ISCNIRScanSDK.LampState.ON);
         
         // 禁用UI交互
-        setActivityTouchDisable(true);
-        if (btn_scan != null) {
-            btn_scan.setEnabled(false);
-        }
-        if (btn_lamp_settings != null) {
-            btn_lamp_settings.setEnabled(false);
-        }
+        // 暂时放开锁定，便于测试
+        // setActivityTouchDisable(true);
+        // if (btn_scan != null) {
+        //     btn_scan.setEnabled(false);
+        // }
+        // if (btn_lamp_settings != null) {
+        //     btn_lamp_settings.setEnabled(false);
+        // }
         
         // 显示倒计时
         if (tv_warmup_countdown != null) {
@@ -3116,6 +3262,32 @@ public class ScanViewActivity extends Activity {
             ISCNIRScanSDK.GetActiveConfig();
         }
     }
+    // 处理权限请求结果
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        
+        if (requestCode == REQUEST_WRITE_STORAGE) {
+            boolean allPermissionsGranted = true;
+            for (int result : grantResults) {
+                if (result != PackageManager.PERMISSION_GRANTED) {
+                    allPermissionsGranted = false;
+                    break;
+                }
+            }
+            
+            if (allPermissionsGranted) {
+                // 权限已授予，如果服务已连接，重新尝试扫描
+                if (mNanoBLEService != null && mBluetoothLeScanner != null) {
+                    updateConnectionStatus("扫描中...");
+                    scanTargetDevice(true);
+                }
+            } else {
+                Toast.makeText(this, "需要蓝牙权限才能使用此功能", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+    
     // Activity销毁时，注销所有广播接收器，移除Handler回调，并存储所有用户偏好设置
     @Override
     public void onDestroy() {
@@ -3173,6 +3345,252 @@ public class ScanViewActivity extends Activity {
     }
 
     // 处理断开连接事件的广播接收器，如果Nano断开连接，将显示提示消息，允许用户重新连接
+    // 绘制参考图线（在下载参考数据后调用）
+    private void drawReferenceLine() {
+        if (mMainChart == null) return;
+        
+        try {
+            // 检查是否有参考校准数据
+            if (ISCNIRScanSDK.ReferenceCalibration.currentCalibration == null || 
+                ISCNIRScanSDK.ReferenceCalibration.currentCalibration.isEmpty()) {
+                // 如果没有参考数据，绘制y=0的直线
+                drawZeroLine();
+                return;
+            }
+            
+            // 获取参考校准数据
+            ISCNIRScanSDK.ReferenceCalibration refCal = ISCNIRScanSDK.ReferenceCalibration.currentCalibration.get(0);
+            
+            // 生成波长范围内的参考数据点
+            // 使用默认波长范围或活动配置的波长范围
+            float startWav = minWavelength;
+            float endWav = maxWavelength;
+            int numPoints = 200; // 生成200个数据点
+            
+            ArrayList<Entry> referenceEntries = new ArrayList<>();
+            float step = (endWav - startWav) / (numPoints - 1);
+            
+            // 根据波长生成参考数据
+            // 注意：这里需要根据实际的参考校准算法来计算参考值
+            // 由于没有扫描数据，我们使用一个合理的默认值（例如1000）作为参考强度
+            for (int i = 0; i < numPoints; i++) {
+                float wavelength = startWav + i * step;
+                // 使用默认参考强度值（实际应该从参考校准数据计算）
+                float referenceValue = 1000f; // 默认参考强度
+                referenceEntries.add(new Entry(wavelength, referenceValue));
+            }
+            
+            // 更新波长范围
+            mWavelengthFloat.clear();
+            for (Entry e : referenceEntries) {
+                mWavelengthFloat.add(e.getX());
+            }
+            minWavelength = startWav;
+            maxWavelength = endWav;
+            
+            // 设置参考数据
+            mReferenceFloat = referenceEntries;
+            minReference = 0f;
+            maxReference = 2000f; // 设置合理的Y轴范围
+            
+            // 更新图表显示参考数据（强度模式）
+            currentDisplayMode = DisplayMode.INTENSITY;
+            mIntensityFloat = new ArrayList<>(referenceEntries);
+            minIntensity = 0f;
+            maxIntensity = 2000f;
+            
+            // 更新X轴范围（固定为900~1700）
+            XAxis xAxis = mMainChart.getXAxis();
+            xAxis.setEnabled(true); // 确保X轴启用
+            xAxis.setDrawLabels(true); // 确保标签显示
+            xAxis.setTextSize(12f); // 增大文本大小
+            xAxis.setTextColor(Color.BLACK); // 设置文本颜色
+            xAxis.setAxisMaximum(maxWavelength);
+            xAxis.setAxisMinimum(minWavelength);
+            xAxis.setGranularity(100f); // 设置标签间隔为100nm
+            xAxis.setLabelCount(9, true); // 设置标签数量，自动分布
+            
+            // 更新Y轴范围（根据数据自动调整）
+            YAxis leftAxis = mMainChart.getAxisLeft();
+            leftAxis.setEnabled(true); // 确保Y轴启用
+            leftAxis.setDrawLabels(true); // 确保标签显示
+            leftAxis.setTextSize(12f); // 增大文本大小
+            leftAxis.setTextColor(Color.BLACK); // 设置文本颜色
+            float yRange = maxIntensity - minIntensity;
+            float yMargin = yRange * 0.1f; // 10%边距
+            leftAxis.setAxisMaximum(maxIntensity + yMargin);
+            if (minIntensity >= 0 && minIntensity < yRange * 0.1f) {
+                leftAxis.setAxisMinimum(0f);
+                leftAxis.setStartAtZero(true);
+            } else {
+                leftAxis.setAxisMinimum(minIntensity - yMargin);
+                leftAxis.setStartAtZero(false);
+            }
+            leftAxis.setValueFormatter(new IAxisValueFormatter() {
+                @Override
+                public String getFormattedValue(float value, AxisBase axis) {
+                    return String.format("%.0f", value);
+                }
+            });
+            
+            // 设置图表描述
+            mMainChart.getDescription().setText("X: 波长 (nm) | Y: 信号强度 (参考)");
+            mMainChart.getDescription().setPosition(mMainChart.getWidth() - 250f, 30f);
+            mMainChart.getDescription().setEnabled(true);
+            
+            // 绘制参考图线
+            LineDataSet refDataSet = new LineDataSet(referenceEntries, "参考");
+            refDataSet.setColor(Color.BLUE);
+            refDataSet.setLineWidth(2f);
+            refDataSet.setDrawCircles(false);
+            refDataSet.setDrawValues(false);
+            refDataSet.setDrawFilled(false);
+            
+            ArrayList<ILineDataSet> dataSets = new ArrayList<>();
+            dataSets.add(refDataSet);
+            LineData lineData = new LineData(dataSets);
+            mMainChart.setData(lineData);
+            mMainChart.invalidate();
+        } catch (Exception e) {
+            // 如果出错，绘制y=0的直线
+            drawZeroLine();
+        }
+    }
+    
+    // 为指定图表绘制y=0的直线（初始化时使用）
+    private void drawZeroLineForChart(LineChart chart) {
+        if (chart == null) return;
+        
+        try {
+            // 使用默认波长范围
+            float startWav = minWavelength;
+            float endWav = maxWavelength;
+            
+            // 创建两个点绘制y=0的水平线
+            ArrayList<Entry> zeroEntries = new ArrayList<>();
+            zeroEntries.add(new Entry(startWav, 0f));
+            zeroEntries.add(new Entry(endWav, 0f));
+            
+            // 更新X轴范围（固定为900~1700）
+            XAxis xAxis = chart.getXAxis();
+            xAxis.setEnabled(true); // 确保X轴启用
+            xAxis.setDrawLabels(true); // 确保标签显示
+            xAxis.setTextSize(12f); // 增大文本大小
+            xAxis.setTextColor(Color.BLACK); // 设置文本颜色
+            xAxis.setAxisMaximum(endWav);
+            xAxis.setAxisMinimum(startWav);
+            xAxis.setGranularity(100f); // 设置标签间隔为100nm
+            xAxis.setLabelCount(9, true); // 设置标签数量，自动分布
+            
+            // 更新Y轴范围（当显示y=0直线时，Y轴应该自动调整到合适的范围）
+            YAxis leftAxis = chart.getAxisLeft();
+            leftAxis.setEnabled(true); // 确保Y轴启用
+            leftAxis.setDrawLabels(true); // 确保标签显示
+            leftAxis.setTextSize(12f); // 增大文本大小
+            leftAxis.setTextColor(Color.BLACK); // 设置文本颜色
+            // 对于y=0的直线，设置一个小的范围以便显示（例如-100到100）
+            leftAxis.setAxisMaximum(100f);
+            leftAxis.setAxisMinimum(-100f);
+            leftAxis.setStartAtZero(false); // 不强制从0开始，以便显示0线
+            leftAxis.setGranularity(50f); // 设置标签间隔
+            leftAxis.setLabelCount(5, true); // 设置标签数量
+            leftAxis.setValueFormatter(new IAxisValueFormatter() {
+                @Override
+                public String getFormattedValue(float value, AxisBase axis) {
+                    return String.format("%.0f", value);
+                }
+            });
+            
+            // 设置图表描述
+            chart.getDescription().setText("X: 波长 (nm) | Y: 信号强度");
+            chart.getDescription().setPosition(chart.getWidth() - 250f, 30f);
+            chart.getDescription().setEnabled(true);
+            
+            // 绘制y=0的直线
+            LineDataSet zeroDataSet = new LineDataSet(zeroEntries, "");
+            zeroDataSet.setColor(Color.GRAY);
+            zeroDataSet.setLineWidth(1f);
+            zeroDataSet.setDrawCircles(false);
+            zeroDataSet.setDrawValues(false);
+            zeroDataSet.setDrawFilled(false);
+            
+            ArrayList<ILineDataSet> dataSets = new ArrayList<>();
+            dataSets.add(zeroDataSet);
+            LineData lineData = new LineData(dataSets);
+            chart.setData(lineData);
+            chart.invalidate();
+        } catch (Exception e) {
+            // Ignore errors
+        }
+    }
+    
+    // 绘制y=0的直线（连接失败时使用）
+    private void drawZeroLine() {
+        if (mMainChart == null) return;
+        
+        try {
+            // 使用默认波长范围
+            float startWav = minWavelength;
+            float endWav = maxWavelength;
+            
+            // 创建两个点绘制y=0的水平线
+            ArrayList<Entry> zeroEntries = new ArrayList<>();
+            zeroEntries.add(new Entry(startWav, 0f));
+            zeroEntries.add(new Entry(endWav, 0f));
+            
+            // 更新X轴范围（固定为900~1700）
+            XAxis xAxis = mMainChart.getXAxis();
+            xAxis.setEnabled(true); // 确保X轴启用
+            xAxis.setDrawLabels(true); // 确保标签显示
+            xAxis.setTextSize(12f); // 增大文本大小
+            xAxis.setTextColor(Color.BLACK); // 设置文本颜色
+            xAxis.setAxisMaximum(endWav);
+            xAxis.setAxisMinimum(startWav);
+            xAxis.setGranularity(100f); // 设置标签间隔为100nm
+            xAxis.setLabelCount(9, true); // 设置标签数量，自动分布
+            
+            // 更新Y轴范围（当显示y=0直线时，Y轴应该自动调整到合适的范围）
+            YAxis leftAxis = mMainChart.getAxisLeft();
+            leftAxis.setEnabled(true); // 确保Y轴启用
+            leftAxis.setDrawLabels(true); // 确保标签显示
+            leftAxis.setTextSize(12f); // 增大文本大小
+            leftAxis.setTextColor(Color.BLACK); // 设置文本颜色
+            // 对于y=0的直线，设置一个小的范围以便显示（例如-100到100）
+            leftAxis.setAxisMaximum(100f);
+            leftAxis.setAxisMinimum(-100f);
+            leftAxis.setStartAtZero(false); // 不强制从0开始，以便显示0线
+            leftAxis.setGranularity(50f); // 设置标签间隔
+            leftAxis.setLabelCount(5, true); // 设置标签数量
+            leftAxis.setValueFormatter(new IAxisValueFormatter() {
+                @Override
+                public String getFormattedValue(float value, AxisBase axis) {
+                    return String.format("%.0f", value);
+                }
+            });
+            
+            // 设置图表描述
+            mMainChart.getDescription().setText("X: 波长 (nm) | Y: 信号强度");
+            mMainChart.getDescription().setPosition(mMainChart.getWidth() - 250f, 30f);
+            mMainChart.getDescription().setEnabled(true);
+            
+            // 绘制y=0的直线
+            LineDataSet zeroDataSet = new LineDataSet(zeroEntries, "");
+            zeroDataSet.setColor(Color.GRAY);
+            zeroDataSet.setLineWidth(1f);
+            zeroDataSet.setDrawCircles(false);
+            zeroDataSet.setDrawValues(false);
+            zeroDataSet.setDrawFilled(false);
+            
+            ArrayList<ILineDataSet> dataSets = new ArrayList<>();
+            dataSets.add(zeroDataSet);
+            LineData lineData = new LineData(dataSets);
+            mMainChart.setData(lineData);
+            mMainChart.invalidate();
+        } catch (Exception e) {
+            // Ignore errors
+        }
+    }
+    
     public class DisconnReceiver extends BroadcastReceiver {
 
         @Override
@@ -3180,10 +3598,19 @@ public class ScanViewActivity extends Activity {
             connected = false;
             updateConnectionStatus("已断开");
             Toast.makeText(mContext, R.string.nano_disconnected, Toast.LENGTH_SHORT).show();
+            // 断开连接后，扫描按钮恢复为灰色锁定状态
+            if (btn_scan != null) {
+                btn_scan.setClickable(false);
+                btn_scan.setEnabled(false);
+                btn_scan.setBackgroundColor(ContextCompat.getColor(mContext, R.color.btn_unavailable));
+            }
             // 不结束Activity，允许用户重新连接
             if (btn_connect_device != null) {
                 btn_connect_device.setEnabled(true);
             }
+            
+            // 连接失败时，绘制y=0的直线
+            drawZeroLine();
         }
     }
     

@@ -6,8 +6,9 @@
     android:id="@+id/layout_main"
     tools:context="com.Innospectra.NanoScan.ScanViewActivity">
 
+    <!-- 合并设备信息和设备状态为一个按钮 -->
     <LinearLayout
-        android:id="@+id/ll_device_info"
+        android:id="@+id/ll_device_info_status"
         android:layout_marginStart="@dimen/dip32"
         android:layout_width="match_parent"
         android:layout_height="@dimen/dip48"
@@ -15,34 +16,11 @@
         android:minHeight="@dimen/dip40">
 
         <TextView
-            android:id="@+id/tv_device_info"
+            android:id="@+id/tv_device_info_status"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/device_information"
-            android:textAppearance="?android:textAppearanceMedium" />
-
-    </LinearLayout>
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="@dimen/px1"
-        android:layout_marginStart="@dimen/dip16"
-        android:background="@color/gray" />
-
-    <LinearLayout
-        android:id="@+id/ll_device_status"
-        android:layout_marginStart="@dimen/dip32"
-        android:layout_width="match_parent"
-        android:layout_height="@dimen/dip48"
-        android:gravity="center"
-        android:minHeight="@dimen/dip40">
-
-        <TextView
-            android:id="@+id/tv_device_status"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/device_status"
+            android:text="设备信息与状态"
             android:textAppearance="?android:textAppearanceMedium" />
 
     </LinearLayout>
@@ -105,4 +83,5 @@
         android:layout_height="@dimen/px1"
         android:layout_marginStart="@dimen/dip16"
         android:background="@color/gray" />
+
 </LinearLayout>

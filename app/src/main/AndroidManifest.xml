@@ -52,10 +52,7 @@
             android:name="com.Innospectra.NanoScan.ConfigureViewActivity"
             android:screenOrientation="portrait"
             tools:ignore="DiscouragedApi,LockedOrientationActivity" />
-        <activity
-            android:name="com.Innospectra.NanoScan.DeviceInfoViewActivity"
-            android:screenOrientation="portrait"
-            tools:ignore="DiscouragedApi,LockedOrientationActivity" />
+        <!-- DeviceInfoViewActivity已合并到DeviceStatusViewActivity -->
         <activity
             android:name="com.Innospectra.NanoScan.DeviceStatusViewActivity"
             android:screenOrientation="portrait"
@@ -64,10 +61,7 @@
             android:name="com.Innospectra.NanoScan.ScanConfigurationsViewActivity"
             android:screenOrientation="portrait"
             tools:ignore="DiscouragedApi,LockedOrientationActivity" />
-<!--    下面是可选光谱仪ID列表-->
-        <activity android:name="com.Innospectra.NanoScan.SelectDeviceViewActivity"
-            android:screenOrientation="portrait"
-            tools:ignore="DiscouragedApi,LockedOrientationActivity" />
+        <!-- SelectDeviceViewActivity已删除，蓝牙连接由ScanViewActivity自动处理 -->
 
         <activity
             android:name="com.Innospectra.NanoScan.AddScanConfigViewActivity"
@@ -85,18 +79,7 @@
             android:label="@string/activation"
             android:screenOrientation="portrait"
             tools:ignore="DiscouragedApi,LockedOrientationActivity" />
-        <activity
-            android:name="com.Innospectra.NanoScan.AdvanceDeviceStatusViewActivity"
-            android:screenOrientation="portrait"
-            tools:ignore="DiscouragedApi,LockedOrientationActivity" />
-        <activity
-            android:name="com.Innospectra.NanoScan.ErrorStatusViewActivity"
-            android:screenOrientation="portrait"
-            tools:ignore="DiscouragedApi,LockedOrientationActivity" />
-        <activity
-            android:name="com.Innospectra.NanoScan.AdvanceErrorStatusViewActivity"
-            android:screenOrientation="portrait"
-            tools:ignore="DiscouragedApi,LockedOrientationActivity" />
+        <!-- AdvanceDeviceStatusViewActivity、ErrorStatusViewActivity、AdvanceErrorStatusViewActivity已合并到DeviceStatusViewActivity -->
     </application>
 
 </manifest>

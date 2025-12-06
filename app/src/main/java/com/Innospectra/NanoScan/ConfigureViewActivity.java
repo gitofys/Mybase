@@ -33,8 +33,7 @@ public class ConfigureViewActivity extends Activity {
     private final BroadcastReceiver BackgroundReciver = new BackGroundReciver();
     private final IntentFilter disconnFilter = new IntentFilter(ISCNIRScanSDK.ACTION_GATT_DISCONNECTED);
     public static final String NOTIFY_BACKGROUND = "com.Innospectra.NanoScan.Configuration.notifybackground";
-    private LinearLayout ll_device_info;
-    private LinearLayout ll_device_status;
+    private LinearLayout ll_device_info_status; // 合并后的设备信息与状态
     private LinearLayout ll_scan_config;
     private LinearLayout ll_lock_button;
     private ToggleButton toggle_btn_lock_button;
@@ -59,15 +58,13 @@ public class ConfigureViewActivity extends Activity {
     }
     private void InitComponent()
     {
-        ll_device_info = (LinearLayout)findViewById(R.id.ll_device_info);
-        ll_device_status = (LinearLayout)findViewById(R.id.ll_device_status);
+        ll_device_info_status = (LinearLayout)findViewById(R.id.ll_device_info_status);
         ll_scan_config = (LinearLayout)findViewById(R.id.ll_scan_config);
         ll_lock_button = (LinearLayout)findViewById(R.id.ll_lock_button);
         toggle_btn_lock_button = (ToggleButton)findViewById(R.id.btn_lock_button);
         view_lock_button = (View)findViewById(R.id.view_lock_button);
 
-        ll_device_info.setOnClickListener(View_Click);
-        ll_device_status.setOnClickListener(View_Click);
+        ll_device_info_status.setOnClickListener(View_Click);
         ll_scan_config.setOnClickListener(View_Click);
         toggle_btn_lock_button.setOnCheckedChangeListener(Toggle_Button_OnCheckedChanged);
 
@@ -88,12 +85,8 @@ public class ConfigureViewActivity extends Activity {
         @Override
         public void onClick(View v) {
             int id =v.getId();
-            if (id == R.id.ll_device_info) {
-                GotoOtherPage = true;
-                Intent infoIntent = new Intent(mContext, DeviceInfoViewActivity.class);
-                startActivity(infoIntent);
-            }
-            else if (id == R.id.ll_device_status) {
+            if (id == R.id.ll_device_info_status) {
+                // 设备信息和设备状态已合并到DeviceStatusViewActivity
                 GotoOtherPage = true;
                 Intent statusIntent = new Intent(mContext, DeviceStatusViewActivity.class);
                 startActivity(statusIntent);

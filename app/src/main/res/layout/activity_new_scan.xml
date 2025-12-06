@@ -251,12 +251,13 @@
                     android:layout_below="@id/ly_scan_mode"
                     android:background="@color/gray" />
 
-                <!-- Lamp control -->
+                <!-- Lamp control with three modes -->
                 <LinearLayout
                     android:id="@+id/ly_lamp"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_below="@id/ly_scan_mode">
+                    android:layout_below="@id/ly_scan_mode"
+                    android:gravity="center_vertical">
 
                     <TextView
                         android:layout_width="0dp"
@@ -265,12 +266,11 @@
                         android:text="灯控制:"
                         android:textAppearance="?android:textAppearanceMedium" />
 
-                    <ToggleButton
-                        android:id="@+id/toggle_button_manual_lamp"
+                    <Spinner
+                        android:id="@+id/spinner_lamp_mode"
                         android:layout_width="wrap_content"
                         android:layout_height="@dimen/dip40"
-                        android:textOff="Off"
-                        android:textOn="On" />
+                        android:minWidth="120dp" />
 
                 </LinearLayout>
 
