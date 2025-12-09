@@ -292,6 +292,10 @@ public class ScanViewActivity extends Activity {
     public static boolean GotoScanConfigFlag = false;
     // 暂停事件触发时是否前往其他页面
     private static Boolean GotoOtherPage = false;
+    // Activity 是否已经完全初始化
+    private boolean isActivityInitialized = false;
+    // 用户是否主动离开 Activity（比如按 Home 键）
+    private boolean userLeaving = false;
     public  static Boolean isOldTiva = false;
     private Boolean WarmUp = false;
     
@@ -325,6 +329,8 @@ public class ScanViewActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_new_scan);
         mContext = this;
+        // 初始化时设置为 true，避免在权限请求等场景下被意外关闭
+        GotoOtherPage = true;
         DEVICE_NAME = ISCNIRScanSDK.getStringPref(mContext,ISCNIRScanSDK.SharedPreferencesKeys.DeviceFilter,"NIR");
         
         // Check permissions first
@@ -416,6 +422,9 @@ public class ScanViewActivity extends Activity {
         LocalBroadcastManager.getInstance(mContext).registerReceiver(ReturnSetPGAReceiver, new IntentFilter(ISCNIRScanSDK.SET_PGA_COMPLETE));
         LocalBroadcastManager.getInstance(mContext).registerReceiver(ReturnSetScanRepeatsReceiver, new IntentFilter(ISCNIRScanSDK.SET_SCANREPEATS_COMPLETE));
         LocalBroadcastManager.getInstance(mContext).registerReceiver(GetPGAReceiver, new IntentFilter(ISCNIRScanSDK.SEND_PGA));
+        
+        // 标记 Activity 已经完全初始化
+        isActivityInitialized = true;
     }
     
     // 权限检查方法
@@ -516,9 +525,12 @@ public class ScanViewActivity extends Activity {
             // 从服务连接获取服务引用
             mNanoBLEService = ((ISCNIRScanSDK.LocalBinder) service).getService();
 
-            // 初始化蓝牙，如果BLE不可用则结束
+            // 初始化蓝牙，如果BLE不可用则显示提示
             if (!mNanoBLEService.initialize()) {
-                finish();
+                // 不直接关闭 Activity，而是显示提示
+                Toast.makeText(ScanViewActivity.this, "BLE 初始化失败，请检查蓝牙设置", Toast.LENGTH_LONG).show();
+                updateConnectionStatus("BLE 不可用");
+                // finish();
                 return;
             }
             
@@ -540,17 +552,24 @@ public class ScanViewActivity extends Activity {
             // 开始扫描匹配DEVICE_NAME的设备
             final BluetoothManager bluetoothManager =
                     (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-            mBluetoothAdapter = bluetoothManager.getAdapter();
-            mBluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
+            if (bluetoothManager != null) {
+                mBluetoothAdapter = bluetoothManager.getAdapter();
+                if (mBluetoothAdapter != null) {
+                    mBluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
+                }
+            }
             if(mBluetoothLeScanner == null){
-                finish();
-                Toast.makeText(ScanViewActivity.this, "请确保蓝牙已开启并重试", Toast.LENGTH_SHORT).show();
+                // 在模拟器或没有蓝牙的设备上，不直接关闭 Activity，而是显示提示
+                Toast.makeText(ScanViewActivity.this, "请确保蓝牙已开启并重试", Toast.LENGTH_LONG).show();
+                updateConnectionStatus("蓝牙不可用");
+                // 不调用 finish()，让用户可以继续使用应用的其他功能
+                // finish();
                 return;
             }
             mHandler = new Handler();
-            // 始终直接扫描目标设备
-            updateConnectionStatus("扫描中...");
-            scanTargetDevice(true);
+            // 取消自动扫描，改为用户点击连接按钮后手动选择设备
+            updateConnectionStatus("未连接");
+            // scanTargetDevice(true); // 已取消自动扫描
         }
 
         @Override
@@ -620,8 +639,10 @@ public class ScanViewActivity extends Activity {
             if(mBluetoothLeScanner != null) {
                 mBluetoothLeScanner.startScan(mLeScanCallback);
             } else {
-                finish();
-                Toast.makeText(ScanViewActivity.this, "请确保蓝牙已开启并重试", Toast.LENGTH_SHORT).show();
+                // 不直接关闭 Activity，而是显示提示
+                Toast.makeText(ScanViewActivity.this, "请确保蓝牙已开启并重试", Toast.LENGTH_LONG).show();
+                updateConnectionStatus("蓝牙不可用");
+                // finish();
             }
         } else {
             if(mBluetoothLeScanner != null) {
@@ -648,8 +669,10 @@ public class ScanViewActivity extends Activity {
             if(mBluetoothLeScanner != null) {
                 mBluetoothLeScanner.startScan(mLeScanCallback);
             }else{
-                finish();
-                Toast.makeText(ScanViewActivity.this, "请确保蓝牙已开启并重试", Toast.LENGTH_SHORT).show();
+                // 不直接关闭 Activity，而是显示提示
+                Toast.makeText(ScanViewActivity.this, "请确保蓝牙已开启并重试", Toast.LENGTH_LONG).show();
+                updateConnectionStatus("蓝牙不可用");
+                // finish();
             }
         } else {
             mBluetoothLeScanner.stopScan(mLeScanCallback);
@@ -2043,7 +2066,7 @@ public class ScanViewActivity extends Activity {
                     } else {
                         ab.setTitle(filePrefix.getText().toString() + ts);
                     }
-                    ab.setSelectedNavigationItem(0);
+                    // 移除 setSelectedNavigationItem(0) - 因为已经移除了Tab导航，改用RadioGroup
                 }
                 
                 storeStringPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.prefix, filePrefix.getText().toString());
@@ -2976,10 +2999,16 @@ public class ScanViewActivity extends Activity {
     // 连接按钮点击事件
     private void onConnectButtonClick() {
         if (!connected) {
-            updateConnectionStatus("扫描中...");
-            scanTargetDevice(true);
+            // 打开设备选择界面，让用户选择要连接的设备
+            Intent selectDeviceIntent = new Intent(ScanViewActivity.this, SelectDeviceViewActivity.class);
+            startActivityForResult(selectDeviceIntent, REQUEST_SELECT_DEVICE);
+        } else {
+            Toast.makeText(this, "设备已连接", Toast.LENGTH_SHORT).show();
         }
     }
+    
+    // 请求选择设备的请求码
+    private static final int REQUEST_SELECT_DEVICE = 1001;
     
     // 灯控制设置菜单
     // 显示灯设置菜单
@@ -3201,9 +3230,61 @@ public class ScanViewActivity extends Activity {
     }
 
     @Override
+    public void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        // 用户主动离开 Activity（比如按 Home 键）
+        userLeaving = true;
+    }
+    
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_SELECT_DEVICE) {
+            if (resultCode == RESULT_OK && data != null) {
+                // 从设备选择界面返回，获取选中的设备MAC地址
+                String selectedDeviceMac = data.getStringExtra("selected_device_mac");
+                String selectedDeviceName = data.getStringExtra("selected_device_name");
+                if (selectedDeviceMac != null && !selectedDeviceMac.isEmpty()) {
+                    // 连接选中的设备
+                    connectToDevice(selectedDeviceMac, selectedDeviceName);
+                } else {
+                    updateConnectionStatus("未选择设备");
+                }
+            } else {
+                updateConnectionStatus("未选择设备");
+            }
+        }
+    }
+    
+    // 连接到指定设备
+    private void connectToDevice(String deviceMac, String deviceName) {
+        if (mNanoBLEService == null) {
+            Toast.makeText(this, "服务未初始化，请稍候再试", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        if (mBluetoothLeScanner != null) {
+            // 停止扫描
+            scanTargetDevice(false);
+        }
+        
+        updateConnectionStatus("连接中...");
+        preferredDevice = deviceMac;
+        // 存储首选设备
+        storeStringPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.preferredDevice, deviceMac);
+        if (deviceName != null) {
+            storeStringPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.preferredDeviceModel, deviceName);
+        }
+        
+        // 连接设备
+        mNanoBLEService.connect(deviceMac);
+    }
+    
+    @Override
     public void onResume() {
         super.onResume();
         GotoOtherPage = false;
+        userLeaving = false; // 重置标志
         numSections=0;
         // 首次恢复时初始化图表数据数组
         if(!chartDataInitialized)
@@ -3328,14 +3409,21 @@ public class ScanViewActivity extends Activity {
         LocalBroadcastManager.getInstance(mContext).unregisterReceiver(ReturnSetPGAReceiver);
         LocalBroadcastManager.getInstance(mContext).unregisterReceiver(ReturnSetScanRepeatsReceiver);
         LocalBroadcastManager.getInstance(mContext).unregisterReceiver(GetPGAReceiver);
-        mHandler.removeCallbacksAndMessages(null);
+        if (mHandler != null) {
+            mHandler.removeCallbacksAndMessages(null);
+        }
     }
     @Override
     public void onPause() {
         super.onPause();
+        // 注释掉自动关闭逻辑，避免在权限请求等场景下被意外关闭
+        // 如果需要关闭 Activity，应该通过其他方式（比如用户按返回键）来触发
         // 返回桌面时，应断开设备连接
-        if(!GotoOtherPage)
-            finish();
+        // 只有在用户主动离开且不是前往其他页面时才关闭
+        // 注意：只有在 onResume() 被调用过之后才可能关闭（即 Activity 已经完全显示过）
+        // if(!GotoOtherPage && userLeaving && isActivityInitialized && !isFinishing()) {
+        //     finish();
+        // }
     }
     private class  BackGroundReciver extends BroadcastReceiver {
         @Override

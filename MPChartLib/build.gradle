@@ -5,7 +5,7 @@ apply plugin: 'maven-publish'
 
 android {
     namespace "com.Innospectra.ISCScanNano"
-    compileSdkVersion 36
+    compileSdkVersion 33
     // buildToolsVersion '26.0.2'
     // resourcePrefix 'mpcht'
     defaultConfig {
@@ -13,6 +13,10 @@ android {
         targetSdkVersion 27
         versionCode 3
         versionName '3.0.3'
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
     buildTypes {
         release {
@@ -44,10 +48,11 @@ dependencies {
 
 android.libraryVariants.all { variant ->
     def name = variant.buildType.name
-    def task = project.tasks.create "jar${name.capitalize()}", Jar
-    task.dependsOn variant.javaCompile
-    task.from variant.javaCompile.destinationDir
-    artifacts.add('archives', task);
+    def jarTask = project.tasks.create "jar${name.capitalize()}", Jar
+    def compileTask = variant.javaCompileProvider.get()
+    jarTask.dependsOn compileTask
+    jarTask.from compileTask.destinationDir
+    artifacts.add('archives', jarTask);
 }
 
 task sourcesJar(type: Jar) {

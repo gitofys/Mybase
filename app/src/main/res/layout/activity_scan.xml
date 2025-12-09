@@ -8,10 +8,25 @@
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="com.Innospectra.NanoScan.SelectDeviceViewActivity">
-    #这是显示可选设备的列表，考虑单一设备如何自己扫描识别。
+    
+    <!-- 扫描状态提示 -->
+    <TextView
+        android:id="@+id/tv_scan_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"
+        android:gravity="center"
+        android:text="@string/scanning"
+        android:textSize="16sp"
+        android:textColor="@android:color/darker_gray" />
+    
+    <!-- 这是显示可选设备的列表，考虑单一设备如何自己扫描识别。 -->
     <ListView
         android:id="@+id/lv_nanoDevices"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:layout_below="@id/tv_scan_status"
+        android:layout_marginTop="10dp" />
 
 </RelativeLayout>

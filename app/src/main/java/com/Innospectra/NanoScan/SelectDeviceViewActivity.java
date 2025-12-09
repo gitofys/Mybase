@@ -47,6 +47,8 @@ public class SelectDeviceViewActivity extends Activity {
     private NanoScanAdapter nanoScanAdapter;
     private static Context mContext;
     private AlertDialog alertDialog;
+    private TextView tv_scan_status;
+    private boolean isScanning = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,6 +68,12 @@ public class SelectDeviceViewActivity extends Activity {
         mBluetoothAdapter = bluetoothManager.getAdapter();
         mBluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
 
+        // 初始化扫描状态提示
+        tv_scan_status = (TextView) findViewById(R.id.tv_scan_status);
+        if (tv_scan_status != null) {
+            tv_scan_status.setText(getString(R.string.scanning));
+        }
+
         ListView lv_nanoDevices = (ListView) findViewById(R.id.lv_nanoDevices);
         // 为BLE扫描返回的NanoDevice对象创建适配器
         nanoScanAdapter = new NanoScanAdapter(this, nanoDeviceList);
@@ -78,6 +86,7 @@ public class SelectDeviceViewActivity extends Activity {
         });
 
         mHandler = new Handler();
+        isScanning = true;
         scanLeDevice(true);
     }
 
@@ -95,7 +104,18 @@ public class SelectDeviceViewActivity extends Activity {
             public void onClick(DialogInterface arg0, int arg1) {
                 alertDialog.dismiss();
                 storeStringPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.preferredDevice, deviceMac);
-                storeStringPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.preferredDeviceModel,name);
+                storeStringPref(mContext, ISCNIRScanSDK.SharedPreferencesKeys.preferredDeviceModel, name);
+                
+                // 停止扫描
+                if (mBluetoothLeScanner != null) {
+                    mBluetoothLeScanner.stopScan(mLeScanCallback);
+                }
+                
+                // 返回选中的设备信息给调用者
+                Intent resultIntent = new Intent();
+                resultIntent.putExtra("selected_device_mac", deviceMac);
+                resultIntent.putExtra("selected_device_name", name);
+                setResult(RESULT_OK, resultIntent);
                 finish();
             }
         });
@@ -134,6 +154,10 @@ public class SelectDeviceViewActivity extends Activity {
                 if (!isDeviceInList) {
                     nanoDeviceList.add(nanoDevice);
                     nanoScanAdapter.notifyDataSetChanged();
+                    // 更新状态提示
+                    if (tv_scan_status != null && isScanning) {
+                        tv_scan_status.setText("找到 " + nanoDeviceList.size() + " 个设备，扫描中...");
+                    }
                 }
             }
         }
@@ -142,6 +166,22 @@ public class SelectDeviceViewActivity extends Activity {
         public void onScanFailed(int errorCode) {
             System.out.println("BLE// onScanFailed");
             Log.e("Scan Failed", "Error Code: " + errorCode);
+            isScanning = false;
+            // 扫描失败时更新状态提示
+            if (tv_scan_status != null) {
+                String errorMsg = "扫描失败，错误代码: " + errorCode;
+                if (errorCode == 1) {
+                    errorMsg = "扫描失败：应用注册失败";
+                } else if (errorCode == 2) {
+                    errorMsg = "扫描失败：内部错误";
+                } else if (errorCode == 3) {
+                    errorMsg = "扫描失败：功能不支持";
+                } else if (errorCode == 4) {
+                    errorMsg = "扫描失败：资源不足";
+                }
+                tv_scan_status.setText(errorMsg);
+            }
+            Toast.makeText(SelectDeviceViewActivity.this, "扫描失败，错误代码: " + errorCode, Toast.LENGTH_SHORT).show();
         }
 
     };
@@ -171,11 +211,21 @@ public class SelectDeviceViewActivity extends Activity {
                     @Override
                     public void run() {
                         mBluetoothLeScanner.stopScan(mLeScanCallback);
+                        isScanning = false;
+                        // 扫描结束后更新状态提示
+                        if (tv_scan_status != null) {
+                            if (nanoDeviceList.isEmpty()) {
+                                tv_scan_status.setText("未找到设备，请确保设备已开启并在附近");
+                            } else {
+                                tv_scan_status.setText("找到 " + nanoDeviceList.size() + " 个设备，请点击选择");
+                            }
+                        }
                     }
                 }, ISCNIRScanSDK.SCAN_PERIOD);
                 mBluetoothLeScanner.startScan(mLeScanCallback);
             } else {
                 mBluetoothLeScanner.stopScan(mLeScanCallback);
+                isScanning = false;
             }
         }
     }

@@ -317,7 +317,7 @@
          <item>60</item>
          <item>61</item>
     </string-array>
-    <string-array name="detail_device_status">
+    <string-array name="detail_device_status_items">
         <item>Tiva</item>
         <item>Scanning</item>
         <item>BLE stack</item>
